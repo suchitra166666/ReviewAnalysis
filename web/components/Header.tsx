@@ -69,10 +69,10 @@ export function Header({
       <div className="mx-auto max-w-page page-gutter py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
               <select
                 aria-label="Company A"
-                className="h-10 max-w-full min-w-0 rounded-control border border-border bg-bg px-2 text-display text-fg"
+                className="h-10 max-w-full min-w-0 rounded-control border border-border bg-bg px-3 text-card text-fg"
                 value={state.a}
                 onChange={(e) => push({ ...state, a: e.target.value })}
               >
@@ -86,7 +86,7 @@ export function Header({
               <span className="text-fg-3">vs</span>
               <select
                 aria-label="Company B"
-                className="h-10 max-w-full min-w-0 rounded-control border border-border bg-bg px-2 text-display text-fg"
+                className="h-10 max-w-full min-w-0 rounded-control border border-border bg-bg px-3 text-card text-fg"
                 value={state.b}
                 onChange={(e) => push({ ...state, b: e.target.value })}
               >

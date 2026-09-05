@@ -425,6 +425,16 @@ def trends(ident, date_from=None, date_to=None, filters=None, **kwargs) -> dict[
         pos, _ = _share(items, lambda x: x.final and x.final.overall_sentiment == "positive")
         return {"neg": neg, "net": pos - neg, "vol": len(items)}
     last_p, prior_p = pack(last), pack(prior)
+
+    def level(p, start, end):
+        # the level behind each delta, so the UI can say "41% -> 58%" rather than just "+17"
+        return {
+            "negative_pct": p["neg"] if p["vol"] else None,
+            "net_sentiment": p["net"] if p["vol"] else None,
+            "volume": p["vol"],
+            "from": start.isoformat(),
+            "to": end.isoformat(),
+        }
     bursts = sorted({x.raw.review_date.date().isoformat() for x in s.loaded if x.flag and x.flag.burst_flag})
     return {
         "meta": _meta(s).model_dump(),
@@ -433,6 +443,9 @@ def trends(ident, date_from=None, date_to=None, filters=None, **kwargs) -> dict[
             "negative_pct": last_p["neg"] - prior_p["neg"],
             "net_sentiment": last_p["net"] - prior_p["net"],
             "volume": last_p["vol"] - prior_p["vol"],
+            "window_days": window,
+            "last": level(last_p, last_start, s.date_to),
+            "prior": level(prior_p, prior_start, last_start - dt.timedelta(days=1)),
         },
         "launch_date": s.company.launch_date_ae.isoformat() if s.company.launch_date_ae else None,
         "burst_days": bursts,

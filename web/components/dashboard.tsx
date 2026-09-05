@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Scatter,
   ScatterChart,
+  ReferenceDot,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -502,15 +503,23 @@ function StrengthCol({ company, rows, color, onTheme }: AnyRec) {
   );
 }
 
+const STAGE_LABELS: Record<string, string> = {
+  discover_browse: "Discover",
+  order_checkout: "Order",
+  wait_track: "Wait",
+  receive: "Receive",
+  recover_support: "Recover",
+};
+
+const KANO_LABELS: Record<string, string> = {
+  must_be: "Basic expectation",
+  performance: "Better is better",
+  delighter: "Nice surprise",
+};
+
 export function JourneySection({ data, glossary, onTheme, loading, reads, nameA = "A", nameB = "B" }: AnyRec) {
   const names: Record<string, string> = { a: nameA, b: nameB };
-  const labels: Record<string, string> = {
-    discover_browse: "Discover",
-    order_checkout: "Order",
-    wait_track: "Wait",
-    receive: "Receive",
-    recover_support: "Recover",
-  };
+  const labels = STAGE_LABELS;
   const order = ["discover_browse", "order_checkout", "wait_track", "receive", "recover_support"];
   // per stage, which company is more negative; ties within 1 point are left unmarked
   const worseAt: Record<string, "a" | "b" | null> = {};
@@ -613,13 +622,24 @@ export function KanoSection({ data, glossary, loading, nameA = "A", nameB = "B" 
 }
 
 export function ThemeSection({ a, b, glossary, onTheme }: { a: AnyRec; b: AnyRec; glossary: Glossary; onTheme: (t: string) => void }) {
-  const rows = a.theme_matrix ?? [];
+  // union of both companies' themes, so the list is the same whichever company is chosen first
   const byB = Object.fromEntries((b.theme_matrix ?? []).map((r: AnyRec) => [r.theme, r]));
-  const radar = rows.map((row: AnyRec) => ({
-    theme: row.label,
-    a: (row.negative_rate ?? 0) * 100,
-    b: ((byB[row.theme]?.negative_rate as number) ?? 0) * 100,
-  }));
+  const seen = new Set<string>();
+  const rows: AnyRec[] = [];
+  for (const r of [...(a.theme_matrix ?? []), ...(b.theme_matrix ?? [])] as AnyRec[]) {
+    if (seen.has(r.theme)) continue;
+    seen.add(r.theme);
+    // a theme only B mentions still gets a row; its A-side rate is unknown, not zero
+    rows.push((a.theme_matrix ?? []).some((x: AnyRec) => x.theme === r.theme) ? r : { ...r, negative_rate: null });
+  }
+  // "other" is the catch-all bucket; it is not a theme anyone can compare on
+  const radar = rows
+    .filter((row: AnyRec) => row.theme !== "other")
+    .map((row: AnyRec) => ({
+      theme: row.label,
+      a: (row.negative_rate ?? 0) * 100,
+      b: ((byB[row.theme]?.negative_rate as number) ?? 0) * 100,
+    }));
   const nameA = a.overview?.meta?.company_name ?? "A";
   const nameB = b.overview?.meta?.company_name ?? "B";
   if (!rows.length) return <SectionFrame title="Theme by theme" empty="No theme matrix for this range.">{null}</SectionFrame>;
@@ -630,15 +650,26 @@ export function ThemeSection({ a, b, glossary, onTheme }: { a: AnyRec; b: AnyRec
         <CompanyLegend nameA={nameA} nameB={nameB} sides={false} note="Negative % per theme; further out is worse." />
       </div>
       <Card>
-        <div className="h-72">
+        <div className="h-[420px] md:h-[600px]">
           <ResponsiveContainer>
-            <RadarChart data={radar}>
+            <RadarChart data={radar} outerRadius="78%" margin={{ top: 24, right: 48, bottom: 24, left: 48 }}>
               <PolarGrid stroke="var(--divider)" />
-              <PolarAngleAxis dataKey="theme" tick={{ fontSize: 12, fill: "var(--fg-3)" }} />
-              <PolarRadiusAxis tick={{ fontSize: 12, fill: "var(--fg-3)" }} />
-              <Radar dataKey="a" name={nameA} stroke="var(--a)" fill="var(--a)" fillOpacity={0.15} />
-              <Radar dataKey="b" name={nameB} stroke="var(--b)" fill="var(--b)" fillOpacity={0.15} />
-              <Legend wrapperStyle={{ fontSize: 12, color: "var(--fg-2)" }} />
+              <PolarAngleAxis dataKey="theme" tick={{ fontSize: 13, fill: "var(--fg-2)" }} />
+              <PolarRadiusAxis
+                angle={75}
+                domain={[0, 100]}
+                tickCount={5}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "var(--fg-3)" }}
+                tickFormatter={(v: number) => (v === 0 ? "" : `${v}%`)}
+              />
+              <Radar dataKey="a" name={nameA} stroke="var(--a)" strokeWidth={2} fill="var(--a)" fillOpacity={0.15} />
+              <Radar dataKey="b" name={nameB} stroke="var(--b)" strokeWidth={2} fill="var(--b)" fillOpacity={0.15} />
+              <Tooltip
+                formatter={(value: number) => `${Number(value).toFixed(1)}% negative`}
+                contentStyle={{ fontSize: 13, borderRadius: 6, borderColor: "var(--border)" }}
+              />
+              <Legend wrapperStyle={{ fontSize: 13, color: "var(--fg-2)" }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -648,34 +679,116 @@ export function ThemeSection({ a, b, glossary, onTheme }: { a: AnyRec; b: AnyRec
           </a>
         </p>
       </Card>
-      <Card>
-        <p className="mb-2 text-caption text-fg-3">
-          <MetricLabel metricKey="negative_pct" glossary={glossary} /> for each theme, per company
-        </p>
-        <table id="theme-table" className="w-full text-left">
-          <thead className="text-caption text-fg-3">
-            <tr className="h-11">
-              <th className="px-3">Theme</th>
-              <th className="px-3 text-right text-a">{nameA}</th>
-              <th className="px-3 text-right text-b">{nameB}</th>
-              <th className="px-3">Stage</th>
-              <th className="px-3">Kano</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row: AnyRec) => (
-              <tr key={row.theme} className="h-11 cursor-pointer border-t border-divider" onClick={() => onTheme(row.theme)}>
-                <td className="px-3 text-small">{row.label}</td>
-                <td className="px-3 text-right text-small">{formatPct(row.negative_rate)}</td>
-                <td className="px-3 text-right text-small">{formatPct(byB[row.theme]?.negative_rate)}</td>
-                <td className="px-3 text-caption">{row.journey_stage}</td>
-                <td className="px-3 text-caption">{row.kano}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      <ThemeTable rows={rows} byB={byB} nameA={nameA} nameB={nameB} glossary={glossary} onTheme={onTheme} />
     </section>
+  );
+}
+
+// ties within 2 points are not called out; "gap" is in percentage points, positive = A is worse
+const THEME_TIE_PTS = 2;
+
+function ThemeTable({ rows, byB, nameA, nameB, glossary, onTheme }: AnyRec) {
+  type Item = { theme: string; label: string; journey_stage?: string; kano?: string; ra: number | null; rb: number | null; gap: number | null; worse: "a" | "b" | null };
+  const items: Item[] = (rows as AnyRec[])
+    .filter((row) => row.theme !== "other")
+    .map((row): Item => {
+      const ra = typeof row.negative_rate === "number" ? row.negative_rate * 100 : null;
+      const rbRaw = byB[row.theme]?.negative_rate;
+      const rb = typeof rbRaw === "number" ? rbRaw * 100 : null;
+      const gap = ra != null && rb != null ? ra - rb : null;
+      const worse: "a" | "b" | null = gap == null || Math.abs(gap) < THEME_TIE_PTS ? null : gap > 0 ? "a" : "b";
+      return { theme: row.theme, label: row.label, journey_stage: row.journey_stage, kano: row.kano, ra, rb, gap, worse };
+    })
+    .sort((x, y) => Math.abs(y.gap ?? -1) - Math.abs(x.gap ?? -1) || Math.max(y.ra ?? 0, y.rb ?? 0) - Math.max(x.ra ?? 0, x.rb ?? 0));
+
+  const worseA = items.filter((r) => r.worse === "a").length;
+  const worseB = items.filter((r) => r.worse === "b").length;
+  const top = items.find((r) => r.worse);
+  const summary = (() => {
+    if (!items.length) return null;
+    if (!top) return "Both companies are within a couple of points on every theme.";
+    const lead = worseA === worseB ? `Each company is worse on ${worseA} of ${items.length} themes` : worseA > worseB ? `${nameA} is worse on ${worseA} of ${items.length} themes` : `${nameB} is worse on ${worseB} of ${items.length} themes`;
+    const who = top.worse === "a" ? nameA : nameB;
+    return `${lead}. Biggest gap: ${top.label}, where ${who} is ${Math.round(Math.abs(top.gap ?? 0))} pts more negative.`;
+  })();
+
+  const pct = (v: number | null) => (v == null ? "—" : `${v.toFixed(0)}%`);
+  // bars are scaled to the biggest gap on the page so the top row always fills half the track
+  const maxGap = Math.max(1, ...items.map((r) => Math.abs(r.gap ?? 0)));
+
+  // one bar per theme, centred at zero: grows left (A's colour) when A is worse, right (B's colour) when B is worse
+  const GapBar = ({ gap, worse }: { gap: number | null; worse: "a" | "b" | null }) => {
+    const half = gap == null ? 0 : (Math.abs(gap) / maxGap) * 50;
+    return (
+      <div className="relative h-3 w-full" aria-hidden>
+        <div className="absolute inset-y-0 left-0 right-1/2 rounded-l-pill bg-divider" />
+        <div className="absolute inset-y-0 left-1/2 right-0 rounded-r-pill bg-divider" />
+        {worse === "a" ? <div className="absolute inset-y-0 rounded-l-pill bg-a" style={{ right: "50%", width: `${half}%` }} /> : null}
+        {worse === "b" ? <div className="absolute inset-y-0 rounded-r-pill bg-b" style={{ left: "50%", width: `${half}%` }} /> : null}
+        <div className="absolute inset-y-[-3px] left-1/2 w-px -translate-x-1/2 bg-fg-3" />
+      </div>
+    );
+  };
+
+  const verdict = (row: Item) => {
+    if (row.gap == null) return { text: "No data", tone: "text-fg-3" };
+    if (!row.worse) return { text: "About the same", tone: "text-fg-3" };
+    return { text: `${row.worse === "a" ? nameA : nameB} worse by ${Math.round(Math.abs(row.gap))} pts`, tone: "text-bad" };
+  };
+
+  return (
+    <Card>
+      <div className="mb-3">
+        <p className="text-caption text-fg-3">
+          Who is worse on each theme, biggest difference first. The bar shows the gap in <MetricLabel metricKey="negative_pct" glossary={glossary} /> between the two companies; the longer the bar, the bigger the gap.
+        </p>
+        {summary ? <p className="mt-1 text-small text-fg">{summary}</p> : null}
+      </div>
+      <table id="theme-table" className="w-full table-fixed text-left">
+        <thead className="text-caption text-fg-3">
+          <tr className="h-11 border-b border-divider">
+            <th className="w-[32%] px-3 font-normal sm:w-[28%]">Theme</th>
+            <th className="px-3 font-normal">
+              <div className="flex justify-between">
+                <span className="text-a">← {nameA} worse</span>
+                <span className="text-b">{nameB} worse →</span>
+              </div>
+            </th>
+            <th className="hidden w-[26%] px-3 font-normal sm:table-cell">Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((row) => {
+            const v = verdict(row);
+            return (
+              <tr key={row.theme} className="cursor-pointer border-t border-divider hover:bg-wash" onClick={() => onTheme(row.theme)}>
+                <td className="px-3 py-3">
+                  <p className="text-small text-fg">{row.label}</p>
+                  <p className="text-caption text-fg-3">
+                    {[row.journey_stage && (STAGE_LABELS[row.journey_stage] ?? row.journey_stage), row.kano && (KANO_LABELS[row.kano] ?? row.kano)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </td>
+                <td className="px-3 py-3 align-middle">
+                  <GapBar gap={row.gap} worse={row.worse} />
+                  <p className={`mt-1.5 text-caption sm:hidden ${v.tone}`}>{v.text}</p>
+                  <p className="text-caption text-fg-3 sm:hidden">
+                    {pct(row.ra)} vs {pct(row.rb)} negative
+                  </p>
+                </td>
+                <td className="hidden px-3 py-3 sm:table-cell">
+                  <p className={`text-small ${v.tone}`}>{v.text}</p>
+                  <p className="text-caption text-fg-3">
+                    {pct(row.ra)} vs {pct(row.rb)} negative
+                  </p>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 
@@ -793,89 +906,218 @@ export function IpaSection({ data, onTheme, glossary, loading, nameA = "A", name
   );
 }
 
+// ---- Trends: direction (are we getting better or worse) and turning points (when did it change) ----
+
+type WeekPoint = { week: string; neg: number | null; vol: number };
+
+// volume-weighted centred 3-week average; damps weeks with only a handful of reviews
+function smoothWeeks(points: WeekPoint[]): (number | null)[] {
+  return points.map((_, i) => {
+    let num = 0;
+    let den = 0;
+    for (let j = Math.max(0, i - 1); j <= Math.min(points.length - 1, i + 1); j++) {
+      const p = points[j];
+      if (p.neg == null || !p.vol) continue;
+      num += p.neg * p.vol;
+      den += p.vol;
+    }
+    return den ? num / den : null;
+  });
+}
+
+const TURN_MIN_PTS = 15;
+const TURN_MIN_REVIEWS = 3;
+
+type Turn = { week: string; from: number; to: number; sustained: boolean };
+
+// the single biggest sustained jump in the smoothed line: where it "broke" (or recovered)
+function findTurningPoint(points: WeekPoint[], smooth: (number | null)[]): Turn | null {
+  let best: Turn | null = null;
+  for (let i = 1; i < smooth.length; i++) {
+    const prev = smooth[i - 1];
+    const cur = smooth[i];
+    if (prev == null || cur == null || points[i].vol < TURN_MIN_REVIEWS) continue;
+    const jump = cur - prev;
+    if (Math.abs(jump) < TURN_MIN_PTS) continue;
+    const after = smooth.slice(i + 1, i + 4).filter((v): v is number => v != null);
+    // sustained = the following weeks stay at least halfway across the jump; the latest week has no "after" yet
+    const held = after.every((v) => (jump > 0 ? v >= prev + jump / 2 : v <= prev + jump / 2));
+    if (after.length && !held) continue;
+    const sustained = after.length > 0;
+    const cand = { week: points[i].week, from: prev, to: cur, sustained };
+    // a confirmed turning point beats a fresh, unconfirmed one; otherwise the bigger jump wins
+    if (!best || (cand.sustained && !best.sustained) || (cand.sustained === best.sustained && Math.abs(jump) > Math.abs(best.to - best.from))) best = cand;
+  }
+  return best;
+}
+
+function weekLabel(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+type Momentum = { last: number | null; prior: number | null; lastVol: number; priorVol: number; windowLabel: string };
+
+// prefer the API's 30-day windows; fall back to 4-week windows from the series for older saved snapshots
+function momentumOf(trends: AnyRec, points: WeekPoint[]): Momentum | null {
+  const m = trends?.momentum;
+  if (m?.last && m?.prior) {
+    return {
+      last: typeof m.last.negative_pct === "number" ? m.last.negative_pct * 100 : null,
+      prior: typeof m.prior.negative_pct === "number" ? m.prior.negative_pct * 100 : null,
+      lastVol: m.last.volume ?? 0,
+      priorVol: m.prior.volume ?? 0,
+      windowLabel: `last ${m.window_days ?? 30} days`,
+    };
+  }
+  if (points.length < 2) return null;
+  const agg = (ps: WeekPoint[]) => {
+    const den = ps.reduce((s, p) => s + (p.neg == null ? 0 : p.vol), 0);
+    const num = ps.reduce((s, p) => s + (p.neg == null ? 0 : p.neg * p.vol), 0);
+    return { pct: den ? num / den : null, vol: ps.reduce((s, p) => s + p.vol, 0) };
+  };
+  const last = agg(points.slice(-4));
+  const prior = agg(points.slice(-8, -4));
+  return { last: last.pct, prior: prior.pct, lastVol: last.vol, priorVol: prior.vol, windowLabel: "last 4 weeks" };
+}
+
+function direction(m: Momentum | null): { verb: "worse" | "better" | "flat" | "unknown"; delta: number | null } {
+  if (!m || m.last == null || m.prior == null) return { verb: "unknown", delta: null };
+  const delta = m.last - m.prior;
+  if (Math.abs(delta) < 2) return { verb: "flat", delta };
+  return { verb: delta > 0 ? "worse" : "better", delta };
+}
+
+function DirectionCard({ name, side, m, glossary }: { name: string; side: "a" | "b"; m: Momentum | null; glossary: Glossary }) {
+  const d = direction(m);
+  const tone = d.verb === "worse" ? "text-bad" : d.verb === "better" ? "text-good" : "text-fg-2";
+  const arrow = d.verb === "worse" ? "↑" : d.verb === "better" ? "↓" : "→";
+  return (
+    <Card className={side === "a" ? "border-l-[3px] border-l-a" : "border-l-[3px] border-l-b"}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className={`text-card ${side === "a" ? "text-a" : "text-b"}`}>{name}</h3>
+        <MetricLabel metricKey="momentum" glossary={glossary} />
+      </div>
+      {m && m.last != null ? (
+        <>
+          <p className="mt-2 text-caption text-fg-3">Negative %, {m.windowLabel}</p>
+          <p className="text-kpi">
+            {m.last.toFixed(0)}%{" "}
+            <span className={`text-card ${tone}`}>
+              {arrow} {d.delta == null ? "" : `${Math.abs(d.delta).toFixed(0)} pts`}
+            </span>
+          </p>
+          <p className={`text-small ${tone}`}>
+            {d.verb === "worse"
+              ? `Getting worse: was ${m.prior?.toFixed(0)}% in the period before`
+              : d.verb === "better"
+                ? `Improving: was ${m.prior?.toFixed(0)}% in the period before`
+                : d.verb === "flat"
+                  ? `Holding steady: was ${m.prior?.toFixed(0)}% in the period before`
+                  : "Not enough earlier reviews to compare"}
+          </p>
+          <p className="mt-1 text-caption text-fg-3">
+            {m.lastVol} {m.lastVol === 1 ? "review" : "reviews"} in this period · {m.priorVol} in the one before
+          </p>
+        </>
+      ) : (
+        <p className="mt-2 text-caption text-fg-3">No reviews in the {m?.windowLabel ?? "recent period"}.</p>
+      )}
+    </Card>
+  );
+}
+
 export function TrendsSection({ a, b, glossary }: { a: AnyRec; b: AnyRec; glossary: Glossary }) {
-  const [norm, setNorm] = useState(false);
-  const seriesA = a.trends?.series ?? [];
-  const seriesB = b.trends?.series ?? [];
-  const weeks = Array.from(new Set([...seriesA.map((s: AnyRec) => s.week), ...seriesB.map((s: AnyRec) => s.week)])).sort();
-  const meanA = seriesA.length ? seriesA.reduce((s: number, x: AnyRec) => s + (x.volume || 0), 0) / seriesA.length : 1;
-  const meanB = seriesB.length ? seriesB.reduce((s: number, x: AnyRec) => s + (x.volume || 0), 0) / seriesB.length : 1;
-  const byA = Object.fromEntries(seriesA.map((s: AnyRec) => [s.week, s]));
-  const byB = Object.fromEntries(seriesB.map((s: AnyRec) => [s.week, s]));
-  const chart = weeks.map((week) => ({
-    week,
-    aNeg: (byA[week]?.negative_pct ?? 0) * 100,
-    bNeg: (byB[week]?.negative_pct ?? 0) * 100,
-    aRate: byA[week]?.rating,
-    bRate: byB[week]?.rating,
-    aVol: norm ? (byA[week]?.volume ?? 0) / meanA : byA[week]?.volume ?? 0,
-    bVol: norm ? (byB[week]?.volume ?? 0) / meanB : byB[week]?.volume ?? 0,
-  }));
-  if (!weeks.length) return <SectionFrame title="Trends" empty="No trend series in this range.">{null}</SectionFrame>;
   const nameA = a.overview?.meta?.company_name ?? "A";
   const nameB = b.overview?.meta?.company_name ?? "B";
-  const legendStyle = { fontSize: 12, color: "var(--fg-2)" };
+  const toPoints = (series: AnyRec[], weeks: string[]): WeekPoint[] => {
+    const by = Object.fromEntries(series.map((s: AnyRec) => [s.week, s]));
+    return weeks.map((week) => ({
+      week,
+      neg: typeof by[week]?.negative_pct === "number" ? by[week].negative_pct * 100 : null,
+      vol: by[week]?.volume ?? 0,
+    }));
+  };
+  const seriesA: AnyRec[] = a.trends?.series ?? [];
+  const seriesB: AnyRec[] = b.trends?.series ?? [];
+  const weeks = Array.from(new Set([...seriesA.map((s) => s.week), ...seriesB.map((s) => s.week)])).sort();
+  if (!weeks.length) return <SectionFrame title="Trends" empty="No trend series in this range.">{null}</SectionFrame>;
+
+  const pA = toPoints(seriesA, weeks);
+  const pB = toPoints(seriesB, weeks);
+  const sA = smoothWeeks(pA);
+  const sB = smoothWeeks(pB);
+  const turnA = findTurningPoint(pA, sA);
+  const turnB = findTurningPoint(pB, sB);
+  const mA = momentumOf(a.trends, pA);
+  const mB = momentumOf(b.trends, pB);
+  const dA = direction(mA);
+  const dB = direction(mB);
+
+  const chart = weeks.map((week, i) => ({ week, a: sA[i], b: sB[i], aVol: pA[i].vol, bVol: pB[i].vol }));
+
+  const sentence = (name: string, m: Momentum | null, d: ReturnType<typeof direction>) => {
+    if (!m || m.last == null || m.prior == null) return `${name}: not enough reviews to read a direction.`;
+    const span = `${m.prior.toFixed(0)}% → ${m.last.toFixed(0)}% negative`;
+    if (d.verb === "worse") return `${name} is getting worse (${span}).`;
+    if (d.verb === "better") return `${name} is improving (${span}).`;
+    return `${name} is holding steady (${span}).`;
+  };
+  const turnSentence = (name: string, t: Turn | null) => {
+    if (!t) return `${name}: no sharp turning point; changes have been gradual.`;
+    const up = t.to > t.from;
+    const move = `negative % ${up ? "jumped" : "fell"} from ${t.from.toFixed(0)}% to ${t.to.toFixed(0)}%`;
+    if (!t.sustained) return `${name}: ${move} in the most recent week (${weekLabel(t.week)}). Too early to know if it holds.`;
+    return `${name} ${up ? "broke" : "recovered"} in the week of ${weekLabel(t.week)}: ${move} and stayed there.`;
+  };
+
   const tickStyle = { fontSize: 12, fill: "var(--fg-3)" };
-  const seriesLabel = (key: string) =>
-    key === "aNeg" ? `${nameA} negative %` : key === "bNeg" ? `${nameB} negative %` : key === "aRate" ? `${nameA} rating` : key === "bRate" ? `${nameB} rating` : key === "aVol" ? `${nameA} reviews/week` : key === "bVol" ? `${nameB} reviews/week` : key;
+  const tooltip = (value: any, key: any, item: any) => {
+    const side = key === "a" ? "a" : "b";
+    const vol = item?.payload?.[side === "a" ? "aVol" : "bVol"] ?? 0;
+    return [typeof value === "number" ? `${value.toFixed(0)}% negative · ${vol} ${vol === 1 ? "review" : "reviews"} this week` : "—", side === "a" ? nameA : nameB];
+  };
+
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-section">Trends</h2>
-        <CompanyLegend nameA={nameA} nameB={nameB} sides={false} note="Solid line is negative %, faint line is analysed rating, by week." />
+        <h2 className="text-section">Is it getting better or worse?</h2>
+        <CompanyLegend nameA={nameA} nameB={nameB} sides={false} note="Negative % by week, 3-week average. Up is worse. Marked dots are turning points." />
       </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <DirectionCard name={nameA} side="a" m={mA} glossary={glossary} />
+        <DirectionCard name={nameB} side="b" m={mB} glossary={glossary} />
+      </div>
+
       <Card>
-        <p className="mb-2 text-caption text-fg-3">Negative % and analysed rating</p>
-        <div className="h-64">
+        <p className="text-small text-fg">
+          {sentence(nameA, mA, dA)} {sentence(nameB, mB, dB)}
+        </p>
+        <div className="mt-3 h-72">
           <ResponsiveContainer>
-            <LineChart data={chart}>
-              <XAxis dataKey="week" tick={tickStyle} />
-              <YAxis tick={tickStyle} />
-              <Tooltip formatter={(value: any, key: any) => [typeof value === "number" ? value.toFixed(1) : value, seriesLabel(String(key))]} />
-              <Legend wrapperStyle={legendStyle} iconType="plainline" />
-              <Line type="monotone" dataKey="aNeg" name={seriesLabel("aNeg")} stroke="var(--a)" strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="bNeg" name={seriesLabel("bNeg")} stroke="var(--b)" strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="aRate" name={seriesLabel("aRate")} stroke="var(--a)" strokeOpacity={0.4} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="bRate" name={seriesLabel("bRate")} stroke="var(--b)" strokeOpacity={0.4} strokeWidth={1.5} dot={false} />
+            <LineChart data={chart} margin={{ top: 16, right: 16, bottom: 0, left: -12 }}>
+              <XAxis dataKey="week" tick={tickStyle} tickFormatter={weekLabel} minTickGap={24} />
+              <YAxis domain={[0, 100]} tick={tickStyle} tickFormatter={(v: number) => `${v}%`} />
+              <Tooltip labelFormatter={(w) => `Week of ${weekLabel(String(w))}`} formatter={tooltip} contentStyle={{ fontSize: 13, borderRadius: 6, borderColor: "var(--border)" }} />
+              {turnA ? <ReferenceLine x={turnA.week} stroke="var(--a)" strokeDasharray="3 3" /> : null}
+              {turnB ? <ReferenceLine x={turnB.week} stroke="var(--b)" strokeDasharray="3 3" /> : null}
+              <Line type="monotone" dataKey="a" name={nameA} stroke="var(--a)" strokeWidth={2} dot={false} connectNulls />
+              <Line type="monotone" dataKey="b" name={nameB} stroke="var(--b)" strokeWidth={2} dot={false} connectNulls />
+              {turnA ? <ReferenceDot x={turnA.week} y={turnA.to} r={5} fill="var(--a)" stroke="var(--bg)" strokeWidth={2} /> : null}
+              {turnB ? <ReferenceDot x={turnB.week} y={turnB.to} r={5} fill="var(--b)" stroke="var(--bg)" strokeWidth={2} /> : null}
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </Card>
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <p className="mb-1 text-caption font-medium text-a">{nameA}</p>
-          <MetricLabel metricKey="momentum" glossary={glossary} />
-          <p className="text-kpi">{formatPct(a.trends?.momentum?.negative_pct)}</p>
-        </Card>
-        <Card>
-          <p className="mb-1 text-caption font-medium text-a">{nameA}</p>
-          <MetricLabel metricKey="net_sentiment" glossary={glossary} />
-          <p className="text-kpi">{formatPct(a.trends?.momentum?.net_sentiment)}</p>
-        </Card>
-        <Card>
-          <p className="mb-1 text-caption font-medium text-a">{nameA}</p>
-          <MetricLabel metricKey="share_of_voice" glossary={glossary} />
-          <p className="text-small text-fg-2">Volume change {a.trends?.momentum?.volume}</p>
-        </Card>
-      </div>
-      <Card>
-        <div className="mb-2 flex items-center justify-between">
-          <MetricLabel metricKey="share_of_voice" glossary={glossary} />
-          <button type="button" className="text-small text-fg-2" onClick={() => setNorm((v) => !v)}>
-            {norm ? "Normalised" : "Raw"}
-          </button>
-        </div>
-        <div className="h-48">
-          <ResponsiveContainer>
-            <LineChart data={chart}>
-              <XAxis dataKey="week" tick={tickStyle} />
-              <YAxis tick={tickStyle} />
-              <Tooltip formatter={(value: any, key: any) => [typeof value === "number" ? value.toFixed(norm ? 2 : 0) : value, seriesLabel(String(key))]} />
-              <Legend wrapperStyle={legendStyle} iconType="plainline" />
-              <Line type="monotone" dataKey="aVol" name={seriesLabel("aVol")} stroke="var(--a)" strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="bVol" name={seriesLabel("bVol")} stroke="var(--b)" strokeWidth={1.5} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="mt-3 space-y-1">
+          <p className="text-caption text-fg-3">Turning points</p>
+          <p className="text-small text-fg-2">
+            <span className="text-a">●</span> {turnSentence(nameA, turnA)}
+          </p>
+          <p className="text-small text-fg-2">
+            <span className="text-b">●</span> {turnSentence(nameB, turnB)}
+          </p>
+          <p className="text-caption text-fg-3">A turning point is a jump of {TURN_MIN_PTS}+ points that held for the following weeks. Something happened that week; the review text for it is one click away in the theme drawer.</p>
         </div>
       </Card>
     </section>
@@ -885,34 +1127,17 @@ export function TrendsSection({ a, b, glossary }: { a: AnyRec; b: AnyRec; glossa
 export function CompetitorSection({ a, b, glossary }: { a: AnyRec; b: AnyRec; glossary: Glossary }) {
   return (
     <section className="space-y-4">
-      <h2 className="text-section">Competitor pull and churn</h2>
+      <div>
+        <h2 className="text-section">Who is about to leave</h2>
+        <p className="mt-1 text-caption text-fg-3">Of each company&apos;s negative reviews, the share where the writer says they are uninstalling or switching. Higher is worse.</p>
+      </div>
       <div className="grid gap-6 md:grid-cols-2">
         {[a, b].map((side: AnyRec, i: number) => (
-          <Card key={side.overview.meta.company_slug} className={`space-y-3 border-l-[3px] ${i === 0 ? "border-l-a" : "border-l-b"}`}>
+          <Card key={side.overview.meta.company_slug} className={`space-y-2 border-l-[3px] ${i === 0 ? "border-l-a" : "border-l-b"}`}>
             <h3 className={`text-card ${i === 0 ? "text-a" : "text-b"}`}>{side.overview.meta.company_name}</h3>
             <MetricLabel metricKey="churn_signal" glossary={glossary} n={side.overview.meta.n_used} />
             <p className="text-kpi">{formatPct(side.overview.churn_signal?.value)}</p>
-            <MetricLabel metricKey="competitor_pull" glossary={glossary} />
-            {Object.keys(side.competitor_pull?.outbound ?? {}).length === 0 ? (
-              <p className="text-caption text-fg-3">No competitor mentions in this range.</p>
-            ) : (
-              Object.entries(side.competitor_pull.outbound).map(([slug, counts]: any) => (
-                <p key={slug} className="text-small">
-                  {slug}: better {counts.competitor_better ?? 0} · worse {counts.competitor_worse ?? 0} · neutral {counts.neutral ?? 0}
-                </p>
-              ))
-            )}
-            <p className="text-caption text-fg-3">What other companies&apos; users say about this company</p>
-            {Object.entries(side.competitor_pull?.inbound ?? {}).map(([slug, counts]: any) => (
-              <p key={slug} className="text-small">
-                {slug}: better {counts.competitor_better ?? 0} · worse {counts.competitor_worse ?? 0} · neutral {counts.neutral ?? 0}
-              </p>
-            ))}
-            {((side.competitor_pull?.snippets ? Object.values(side.competitor_pull.snippets).flat() : []) as AnyRec[])
-              .slice(0, 3)
-              .map((sn, i) => (
-                <ArabicText key={i} text={sn.text} textEn={sn.text_en} language={sn.language} />
-              ))}
+            <p className="text-caption text-fg-3">of negative reviews say they are leaving</p>
           </Card>
         ))}
       </div>
@@ -977,7 +1202,6 @@ export function PmSection({
               </ul>
             </div>
           </div>
-          <p className="text-small text-fg-2">{summary.competitor_pull_read}</p>
           <ul className="list-disc pl-5 text-small text-fg-2">
             {(summary.caveats ?? []).map((x: string) => (
               <li key={x}>{x}</li>

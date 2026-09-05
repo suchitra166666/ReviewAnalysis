@@ -219,6 +219,8 @@ export default function DashboardPage() {
   const analysed = (oa?.reviews_analysed ?? 0) + (ob?.reviews_analysed ?? 0);
   const noAnalysed = Boolean(view.compare && analysed === 0);
   const scrapedOnly = noAnalysed && scraped > 0;
+  // one side analysed, the other not: the comparison is one-sided and the reader must be told
+  const emptySide = view.compare && !noAnalysed ? ((oa?.reviews_analysed ?? 0) === 0 ? nameA : (ob?.reviews_analysed ?? 0) === 0 ? nameB : null) : null;
 
   function openExplorer(extra: AnyRec) {
     setExplorer({ company: state.a, ...extra });
@@ -353,6 +355,20 @@ export default function DashboardPage() {
                 Open Jobs
               </Link>
             )}
+          </Card>
+        ) : null}
+
+        {emptySide && !frozen ? (
+          <Card className="border-bad">
+            <p className="text-body">
+              {emptySide} has no analysed reviews in this range, so every section below shows {emptySide === nameA ? nameB : nameA} on its own. Nothing here is a comparison until {emptySide}&apos;s reviews are analysed.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button onClick={() => setRunOpen(true)}>Run pipeline for {emptySide}</Button>
+              <Link href="/jobs" className="inline-flex h-10 items-center text-small text-fg-2">
+                Open Jobs
+              </Link>
+            </div>
           </Card>
         ) : null}
 
