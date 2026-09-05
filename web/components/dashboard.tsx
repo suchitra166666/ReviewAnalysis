@@ -512,30 +512,55 @@ export function JourneySection({ data, glossary, onTheme, loading, reads, nameA 
     recover_support: "Recover",
   };
   const order = ["discover_browse", "order_checkout", "wait_track", "receive", "recover_support"];
+  // per stage, which company is more negative; ties within 1 point are left unmarked
+  const worseAt: Record<string, "a" | "b" | null> = {};
+  if (data) {
+    const rateOf = (side: "a" | "b", stage: string): number | null => {
+      const cell = (data[side]?.cells ?? []).find((c: AnyRec) => c.stage === stage);
+      return typeof cell?.negative_rate === "number" ? cell.negative_rate : null;
+    };
+    for (const stage of order) {
+      const ra = rateOf("a", stage);
+      const rb = rateOf("b", stage);
+      worseAt[stage] = ra == null || rb == null || Math.abs(ra - rb) < 0.01 ? null : ra > rb ? "a" : "b";
+    }
+  }
   return (
     <SectionFrame title="Where the experience breaks" loading={loading} empty={!data && !loading ? "Journey map is not available yet." : undefined}>
       {data ? (
         <>
           <CompanyLegend nameA={nameA} nameB={nameB} sides={false} note="One row per company, stages Discover → Order → Wait → Receive → Recover." />
-          <MetricLabel metricKey="negative_pct" glossary={glossary} />
+          <p className="flex flex-wrap items-center gap-x-3 text-caption text-fg-3">
+            <MetricLabel metricKey="negative_pct" glossary={glossary} />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-pill bg-bad" aria-hidden />
+              Red = the more negative of the two companies at that stage
+            </span>
+          </p>
           {["a", "b"].map((side) => (
             <div key={side}>
               <p className={`mb-2 text-caption font-medium ${side === "a" ? "text-a" : "text-b"}`}>{names[side]}</p>
               <div className="grid gap-2 md:grid-cols-5">
-              {(data[side]?.cells ?? []).map((cell: AnyRec) => (
+              {(data[side]?.cells ?? []).map((cell: AnyRec) => {
+                const worse = worseAt[cell.stage] === side;
+                const other = side === "a" ? nameB : nameA;
+                return (
                 <button
                   key={cell.stage}
                   type="button"
                   onClick={() => cell.top_theme && onTheme(cell.top_theme)}
-                  className={`rounded-card border p-4 text-left ${cell.stage === data[side].peak_stage ? "border-fg" : "border-border"} ${side === "a" ? "border-l-[3px] border-l-a" : "border-l-[3px] border-l-b"}`}
+                  className={`rounded-card border p-4 text-left ${worse ? "border-bad" : cell.stage === data[side].peak_stage ? "border-fg" : "border-border"} ${side === "a" ? "border-l-[3px] border-l-a" : "border-l-[3px] border-l-b"}`}
+                  aria-label={`${labels[cell.stage]}: ${formatPct(cell.negative_rate)} negative${worse ? `, more negative than ${other}` : ""}`}
                 >
                   <p className="text-caption text-fg-3">{labels[cell.stage]}</p>
-                  <p className="text-card">{formatPct(cell.negative_rate)}</p>
+                  <p className={`text-card ${worse ? "text-bad" : ""}`}>{formatPct(cell.negative_rate)}</p>
+                  {worse ? <p className="text-caption text-bad">Worse than {other}</p> : null}
                   <p className="text-caption text-fg-2">{formatPct(cell.complaint_share)} of complaints</p>
                   <p className="text-caption">{(cell.top_theme ?? "").replace(/_/g, " ")}</p>
                   {cell.snippet ? <ArabicText text={cell.snippet.text} textEn={cell.snippet.text_en} language={cell.snippet.language} /> : null}
                 </button>
-              ))}
+                );
+              })}
               </div>
             </div>
           ))}
