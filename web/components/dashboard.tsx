@@ -428,7 +428,9 @@ function explanationFor(row: AnyRec, explanations?: Record<string, string>): str
 }
 
 function PainCol({ company, rows, color, onTheme, explanations }: AnyRec) {
+  // "other" is the catch-all bucket; guard here too so older saved snapshots never rank it
   const ranked = [...(rows ?? [])]
+    .filter((row: AnyRec) => row.theme !== "other")
     .sort((x: AnyRec, y: AnyRec) => (y.severity ?? 0) - (x.severity ?? 0) || (y.negative_rate ?? 0) - (x.negative_rate ?? 0))
     .slice(0, 5);
   return (
