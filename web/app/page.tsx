@@ -365,7 +365,7 @@ export default function DashboardPage() {
               onTheme={setTheme}
             />
             <KpiSection a={view.compare.a} b={view.compare.b} deltas={view.compare.deltas ?? []} glossary={g} onExplore={openExplorer} />
-            <StarsSection a={view.compare.a} b={view.compare.b} />
+            <StarsSection a={view.compare.a} b={view.compare.b} glossary={g} />
             <PainSection
               a={view.compare.a}
               b={view.compare.b}

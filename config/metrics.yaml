@@ -39,14 +39,18 @@ metrics:
     label: Watch list
     meaning: Themes whose negative rate is rising fastest over the last 30 days — the things that will be next quarter's top pain points if nobody acts.
     formula: top 3 themes by momentum of negative rate
+  star_mix:
+    label: Star mix
+    meaning: "Share of analysed reviews at each star rating. The words under a bar are the themes that come up most in that star — so a long 5★ bar tagged \"late delivery\" means many five-star reviews still mention lateness."
+    formula: weighted share of used reviews by star_rating; top themes by mention weight within that star
   star_drag:
     label: Star drag
     meaning: How many stars a problem costs. Reviews mentioning "missing items" average 1.9★ while the overall average is 3.7★ → star drag −1.8. Bigger drag = the problem hurts the rating more per occurrence.
     formula: mean stars of reviews mentioning theme − overall mean stars
   severity:
-    label: Severity
-    meaning: "Which problem to fix first: how often it happens × how much it hurts."
-    formula: negative-mention rate × |star drag|, normalised
+    label: Fix-first ranking
+    meaning: "Problems are listed in the order they deserve attention. Two facts set the order: how often the theme is a complaint (of the reviews that mention it, what share are negative) and how much it costs in stars (average stars of reviews mentioning it, compared with the company's overall average). A rare problem that wrecks the rating can rank above a common one that barely dents it. Each company is ranked on its own, so #1 for one company is not comparable with #1 for the other."
+    formula: share of mentions that are negative × stars lost (overall avg − avg when mentioned, floored at 0); ranked per company
   complaint_concentration:
     label: Complaint concentration
     meaning: Are complaints spread out or concentrated? "Top 3 themes = 74% of negative mentions" means fixing three things fixes most of the pain.

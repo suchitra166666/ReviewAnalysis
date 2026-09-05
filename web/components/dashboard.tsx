@@ -280,7 +280,7 @@ export function KpiSection({
   );
 }
 
-export function StarsSection({ a, b }: { a: AnyRec; b: AnyRec }) {
+export function StarsSection({ a, b, glossary }: { a: AnyRec; b: AnyRec; glossary: Glossary }) {
   const [raw, setRaw] = useState(false);
   const sa = a.star_scenario;
   const sb = b.star_scenario;
@@ -301,8 +301,9 @@ export function StarsSection({ a, b }: { a: AnyRec; b: AnyRec }) {
         </button>
       </div>
       <CompareCard
-        metricKey="reviews_analysed"
-        glossary={{}}
+        metricKey="star_mix"
+        glossary={glossary}
+        n={(a.overview?.meta?.n_used ?? 0) + (b.overview?.meta?.n_used ?? 0)}
         nameA={nameA}
         nameB={nameB}
         a={<StarBars buckets={sa?.buckets ?? []} color="var(--a)" raw={raw} />}
@@ -363,18 +364,54 @@ export function PainSection({
   explanations?: Record<string, string>;
 }) {
   const empty = !(a.pain_points ?? []).length && !(b.pain_points ?? []).length;
+  const nameA = a.overview?.meta?.company_name ?? "A";
+  const nameB = b.overview?.meta?.company_name ?? "B";
+  if (empty) {
+    return <SectionFrame title="What to fix first" empty="No pain points or strengths in this range.">{null}</SectionFrame>;
+  }
   return (
-    <SectionFrame title="Pain points and strengths" empty={empty ? "No pain points or strengths in this range." : undefined}>
-      <div className="grid gap-6 md:grid-cols-2">
-        <PainCol company={a.overview.meta.company_name} rows={a.pain_points} color="a" glossary={glossary} onTheme={onTheme} explanations={explanations} />
-        <PainCol company={b.overview.meta.company_name} rows={b.pain_points} color="b" glossary={glossary} onTheme={onTheme} explanations={explanations} />
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-section">What to fix first</h2>
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-caption text-fg-3">
+          <span>Each company&apos;s problems, most urgent at the top. Ranked on its own, so the two lists are not comparable.</span>
+          <MetricLabel metricKey="severity" glossary={glossary} />
+        </p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <StrengthCol company={a.overview.meta.company_name} rows={a.strengths} color="a" onTheme={onTheme} />
-        <StrengthCol company={b.overview.meta.company_name} rows={b.strengths} color="b" onTheme={onTheme} />
+        <PainCol company={nameA} rows={a.pain_points} color="a" onTheme={onTheme} explanations={explanations} />
+        <PainCol company={nameB} rows={b.pain_points} color="b" onTheme={onTheme} explanations={explanations} />
       </div>
-    </SectionFrame>
+      <div className="grid gap-6 md:grid-cols-2">
+        <StrengthCol company={nameA} rows={a.strengths} color="a" onTheme={onTheme} />
+        <StrengthCol company={nameB} rows={b.strengths} color="b" onTheme={onTheme} />
+      </div>
+    </section>
   );
+}
+
+/** "8 in 10" reads faster than "80%" for a share of mentions. */
+function inTen(rate: number | null | undefined): string | null {
+  if (rate == null || Number.isNaN(rate)) return null;
+  const n = Math.round(rate * 10);
+  if (n <= 0) return "fewer than 1 in 10";
+  if (n >= 10) return "nearly every";
+  return `${n} in 10`;
+}
+
+/** One plain sentence with the two facts that set the ranking. */
+function whyRanked(row: AnyRec): string {
+  const parts: string[] = [];
+  const share = inTen(row.negative_rate);
+  if (share) parts.push(share === "nearly every" ? "Nearly every mention is a complaint" : `Complained about in ${share} mentions`);
+  // star_drag is (avg stars when mentioned − overall avg): negative means the theme pulls the rating down
+  const drag = typeof row.star_drag === "number" ? row.star_drag : null;
+  if (drag != null) {
+    if (Math.abs(drag) < 0.05) parts.push("barely moves the rating");
+    else if (drag < 0) parts.push(`costs about ${Math.abs(drag).toFixed(1)}★ when it comes up`);
+    else parts.push("does not lower the rating");
+  }
+  return parts.join(" · ");
 }
 
 function explanationFor(row: AnyRec, explanations?: Record<string, string>): string {
@@ -390,27 +427,39 @@ function explanationFor(row: AnyRec, explanations?: Record<string, string>): str
   return match ? match[1] : row.explanation;
 }
 
-function PainCol({ company, rows, color, glossary, onTheme, explanations }: AnyRec) {
+function PainCol({ company, rows, color, onTheme, explanations }: AnyRec) {
+  const ranked = [...(rows ?? [])]
+    .sort((x: AnyRec, y: AnyRec) => (y.severity ?? 0) - (x.severity ?? 0) || (y.negative_rate ?? 0) - (x.negative_rate ?? 0))
+    .slice(0, 5);
   return (
     <Card className={color === "a" ? "border-l-[3px] border-l-a" : "border-l-[3px] border-l-b"}>
-      <h3 className="text-card">{company}</h3>
-      <MetricLabel metricKey="severity" glossary={glossary} />
-      <div className="mt-3 space-y-4">
-        {(rows ?? []).map((row: AnyRec) => (
-          <button key={row.theme} type="button" className="block w-full text-left" onClick={() => onTheme(row.theme)}>
-            <p className="text-small text-fg">{row.label}</p>
-            <p className="text-caption text-fg-2">
-              {formatPct(row.negative_rate)} · star drag {row.star_drag?.toFixed?.(1)}★
-              {row.kano ? ` · ${String(row.kano).replace("_", "-")}` : ""}
-              {row.journey_stage ? ` · ${String(row.journey_stage).replace(/_/g, " ")}` : ""}
-            </p>
-            <p className="text-caption">{explanationFor(row, explanations)}</p>
-            {(row.snippets ?? []).slice(0, 2).map((sn: AnyRec, i: number) => (
-              <ArabicText key={i} text={sn.text} textEn={sn.text_en} language={sn.language} />
-            ))}
-          </button>
-        ))}
-      </div>
+      <h3 className={`text-card ${color === "a" ? "text-a" : "text-b"}`}>{company}</h3>
+      {ranked.length ? (
+        <ol className="mt-3 space-y-4">
+          {ranked.map((row: AnyRec, i: number) => (
+            <li key={row.theme}>
+              <button type="button" className="flex w-full gap-3 text-left" onClick={() => onTheme(row.theme)}>
+                <span className="w-5 shrink-0 pt-px text-small text-fg-3" aria-hidden>
+                  {i + 1}.
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-small text-fg">{row.label}</span>
+                    {i === 0 ? <Pill>Fix first</Pill> : null}
+                  </div>
+                  <p className="mt-0.5 text-caption text-fg-2">{whyRanked(row)}</p>
+                  {explanationFor(row, explanations) ? <p className="mt-1 text-caption">{explanationFor(row, explanations)}</p> : null}
+                  {(row.snippets ?? []).slice(0, 2).map((sn: AnyRec, j: number) => (
+                    <ArabicText key={j} text={sn.text} textEn={sn.text_en} language={sn.language} />
+                  ))}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-3 text-caption text-fg-3">No pain points in this range.</p>
+      )}
     </Card>
   );
 }

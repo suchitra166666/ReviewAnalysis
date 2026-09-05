@@ -265,7 +265,8 @@ def _theme_rows(s: CompanySlice, sentiment: str) -> list[ThemeRow]:
             [i.weight for i, _ in pairs],
         )
         pos_rate = pos_w / (sum(i.weight for i, _ in pairs) or 1)
-        sev = neg_rate * abs(drag)
+        # only a downward pull on the rating counts as cost; a theme rated above average is not a fix
+        sev = neg_rate * max(0.0, -drag)
         sevs.append(sev)
         ar_snips = [sn for sn in snippets if sn["language"] in {"ar", "mixed"}]
         chosen = []
@@ -299,8 +300,11 @@ def _theme_rows(s: CompanySlice, sentiment: str) -> list[ThemeRow]:
     for row in rows:
         if row.severity is not None and max_sev:
             row.severity = row.severity / max_sev
-    key = "negative_rate" if sentiment == "negative" else "positive_rate"
-    rows.sort(key=lambda r: getattr(r, key), reverse=True)
+    if sentiment == "negative":
+        # ranked by what to fix first: how often it is a complaint x how much it costs in stars
+        rows.sort(key=lambda r: (r.severity or 0.0, r.negative_rate), reverse=True)
+    else:
+        rows.sort(key=lambda r: r.positive_rate, reverse=True)
     for row in rows[:5]:
         row.explanation = pain_explanation(
             row.theme, {"a_rate": row.negative_rate, "b_rate": None}
@@ -343,7 +347,9 @@ def _theme_spark(s: CompanySlice, theme: str) -> list[float]:
 
 
 def pain_points(ident, date_from=None, date_to=None, filters=None, **kwargs) -> list[ThemeRow]:
-    return _theme_rows(load_slice(ident, date_from, date_to, filters, **kwargs), "negative")
+    rows = _theme_rows(load_slice(ident, date_from, date_to, filters, **kwargs), "negative")
+    # "other" is the catch-all bucket; nobody can act on it, so it never ranks as a fix
+    return [r for r in rows if r.theme != "other"]
 
 
 def strengths(ident, date_from=None, date_to=None, filters=None, **kwargs) -> list[ThemeRow]:
