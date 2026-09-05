@@ -96,4 +96,4 @@ rap summarize --a <slug-a> --b <slug-b> --since-launch --dry-run
 
 ## License
 
-MIT. See `LICENSE` and `CONTRIBUTING.md`.
+[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0). Personal, research, hobby, and nonprofit use is allowed. Commercial use is not. See `LICENSE`.
