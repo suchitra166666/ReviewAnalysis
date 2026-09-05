@@ -1,0 +1,27 @@
+:root {
+  --bg: #ffffff;
+  --canvas: #f7f8fa;
+  --border: #e4e7ec;
+  --divider: #eef0f3;
+  --fg: #1b1f27;
+  --fg-2: #5b6472;
+  --fg-3: #8a93a2;
+  --disabled: #b8bfca;
+  --a: #2e5bff;
+  --b: #0f9d8a;
+  --good: #1e7b4d;
+  --bad: #b4232c;
+  --muted: #8a93a2;
+  --wash: #f2f4f7;
+  --focus: #2e5bff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

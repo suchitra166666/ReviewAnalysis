@@ -1,0 +1,69 @@
+metrics:
+  reviews_analysed:
+    label: Reviews analysed
+    meaning: How many reviews the numbers below are based on, after removing junk (empty praise, contradictory, suspected incentivized, or failed parsing). Those exclusions are always applied. Percentages are then weighted back to the real star mix so they reflect what customers actually rate, not the sample the scraper happened to pull.
+    formula: n_used
+  analysed_average_rating:
+    label: Analysed average rating
+    meaning: The star rating the usable reviews imply. Often lower than the store rating because promo-driven and empty 5★ reviews are removed.
+    formula: weighted mean of star_rating over used reviews
+  store_headline_rating:
+    label: Store headline rating
+    meaning: What a customer sees on the store — the average of all reviews in the range, junk included.
+    formula: mean of star_rating over all raw reviews in range
+  positive_pct:
+    label: Positive %
+    meaning: Share of usable reviews whose overall tone is positive.
+    formula: weighted share of overall_sentiment
+  negative_pct:
+    label: Negative %
+    meaning: Share of usable reviews whose overall tone is negative.
+    formula: weighted share of overall_sentiment
+  net_sentiment:
+    label: Net sentiment
+    meaning: "One number for \"are people net happy or net unhappy\". Like NPS but from review text: +40 means positives outnumber negatives by 40 points; 0 means they cancel out; negative means more complaints than praise. Use it to compare two companies in a glance and to track direction over time."
+    formula: positive % − negative %
+  promo_dependence:
+    label: Promo dependence
+    meaning: How much of a company's good reviews are really about discounts, vouchers, free delivery, or subscription perks (e.g. a paid membership that waives fees) rather than the service itself. Every Dubai app runs these — launch offers, first-order discounts, loyalty subscriptions — so this applies to any pair. If 40% of a company's positive reviews cite an offer, its rating is partly bought and may fall when the offer ends.
+    formula: share of positive reviews with mentions_incentive = true
+  momentum:
+    label: Momentum
+    meaning: Is it getting better or worse right now? Compares the last 30 days with the 30 days before. A negative % of 22% is bad; a negative % that went from 15% to 22% in a month is an emergency.
+    formula: metric(last 30d) − metric(prior 30d), with CI
+  share_of_voice:
+    label: Share of voice
+    meaning: Who is being talked about more, week by week. Raw = review counts (the larger app will always dominate). Normalised = each company's weekly count divided by its own average, so a small app's spike is visible next to a big one's. Rising share of voice for a competitor often precedes a market-share shift.
+    formula: weekly count; normalised = count / company's mean weekly count in range
+  watch_list:
+    label: Watch list
+    meaning: Themes whose negative rate is rising fastest over the last 30 days — the things that will be next quarter's top pain points if nobody acts.
+    formula: top 3 themes by momentum of negative rate
+  star_drag:
+    label: Star drag
+    meaning: How many stars a problem costs. Reviews mentioning "missing items" average 1.9★ while the overall average is 3.7★ → star drag −1.8. Bigger drag = the problem hurts the rating more per occurrence.
+    formula: mean stars of reviews mentioning theme − overall mean stars
+  severity:
+    label: Severity
+    meaning: "Which problem to fix first: how often it happens × how much it hurts."
+    formula: negative-mention rate × |star drag|, normalised
+  complaint_concentration:
+    label: Complaint concentration
+    meaning: Are complaints spread out or concentrated? "Top 3 themes = 74% of negative mentions" means fixing three things fixes most of the pain.
+    formula: Pareto over negative mentions
+  churn_signal:
+    label: Churn signal
+    meaning: Share of negative reviews where the user says they are leaving or have switched ("uninstalled", "moving to another app"). The reviews that convert into lost customers.
+    formula: share of negative reviews with churn_intent = true
+  competitor_pull:
+    label: Competitor pull
+    meaning: Of the reviews of Company A that name a competitor, how many say the competitor is better.
+    formula: share of competitor mentions with competitor_comparison = competitor_better
+  developer_response_rate:
+    label: Developer response rate
+    meaning: How often the company replies to 1–2★ reviews on the store, and how fast. A cheap, visible signal of whether support is listening.
+    formula: share of 1–2★ reviews with reply_body; median hours to reply
+  agreement_rate:
+    label: Agreement rate
+    meaning: "Data trust: how often two independent AI models gave the same label. Shown so a VP can judge how much to trust a chart."
+    formula: share of reviews with confidence_tier = agreed

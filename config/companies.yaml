@@ -1,0 +1,91 @@
+# Seed only. Read once on first run (or via `rap companies sync --from-yaml`).
+# Afterwards companies are managed in Settings. IDs confirmed 2026-09-05.
+companies:
+  - slug: talabat
+    display_name: Talabat
+    appstore_id: "451001072"
+    play_package: com.talabat
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [talabat, طلبات]
+    notes: TODO launch_date_ae
+  - slug: careem
+    display_name: Careem
+    appstore_id: "592978487"
+    play_package: com.careem.acma
+    launch_date_ae: null
+    is_super_app: true
+    aliases: [careem, كريم, careem food]
+    notes: TODO launch_date_ae; food lives inside the super-app
+  - slug: noon-food
+    display_name: noon Food
+    appstore_id: "1269038866"
+    play_package: com.noon.buyerapp
+    launch_date_ae: null
+    is_super_app: true
+    aliases: [noon food, noon, نون]
+    notes: TODO launch_date_ae; IDs are the parent noon app
+  - slug: deliveroo
+    display_name: Deliveroo
+    appstore_id: "1001501844"
+    play_package: com.deliveroo.orderapp
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [deliveroo, ديليفرو]
+    notes: TODO launch_date_ae
+  - slug: keeta
+    display_name: Keeta
+    appstore_id: "1662451643"
+    play_package: com.sankuai.sailor.afooddelivery
+    launch_date_ae: "2025-09-27"
+    is_super_app: false
+    aliases: [keeta, كيتا]
+    notes: ""
+  - slug: instashop
+    display_name: InstaShop
+    appstore_id: "989276051"
+    play_package: com.stedor.instashop
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [instashop, انستاشوب]
+    notes: TODO launch_date_ae
+  - slug: eat-easy
+    display_name: Eat Easy
+    appstore_id: "734231600"
+    play_package: com.eateasily.androidapp
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [eateasy, eat easy, ايت ايزي]
+    notes: TODO launch_date_ae
+  - slug: eat-clean
+    display_name: Eat Clean
+    appstore_id: "6450007153"
+    play_package: com.eatcleanme
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [eat clean, eatclean]
+    notes: TODO launch_date_ae; meal-plan delivery
+  - slug: elgrocer
+    display_name: ElGrocer
+    appstore_id: "1040399641"
+    play_package: com.el_grocer.shopper
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [elgrocer, el grocer]
+    notes: TODO launch_date_ae
+  - slug: toters
+    display_name: Toters
+    appstore_id: "1015006220"
+    play_package: com.toters.customer
+    launch_date_ae: null
+    is_super_app: false
+    aliases: [toters, توترز]
+    notes: TODO launch_date_ae; UAE listing exists, core market is elsewhere
+  - slug: smiles
+    display_name: Smiles
+    appstore_id: "1225034537"
+    play_package: ae.etisalat.smiles
+    launch_date_ae: null
+    is_super_app: true
+    aliases: [smiles, سمايلز]
+    notes: TODO launch_date_ae; lifestyle super-app

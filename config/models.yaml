@@ -1,0 +1,68 @@
+# verified against provider docs on: 2026-09-05
+# Sources:
+#   OpenAI: https://developers.openai.com/api/docs/pricing
+#   DeepSeek: https://api-docs.deepseek.com/quick_start/pricing/
+# This file is a SEED for the Settings store. It is read once on first run;
+# afterwards the UI is the source of truth.
+providers:   # no keys here, ever — keys are entered in the UI and stored encrypted
+  openai:
+    display_name: OpenAI
+    base_url: https://api.openai.com/v1
+    is_openai_compatible: true
+    supports_batch: true
+    supports_structured_outputs: true
+    disable_thinking: false
+  deepseek:
+    display_name: DeepSeek
+    base_url: https://api.deepseek.com
+    is_openai_compatible: true
+    supports_batch: false
+    supports_structured_outputs: false
+    disable_thinking: true
+
+roles:
+  extract_a: { provider: openai,   model: gpt-5.6-terra }
+  extract_b: { provider: deepseek, model: deepseek-v4-pro }
+  tiebreak:  { provider: openai,   model: gpt-5.6-sol }
+  translate: { provider: deepseek, model: deepseek-v4-flash }
+  summarize: { provider: openai,   model: gpt-5.6-sol }
+  embed:     { provider: openai,   model: text-embedding-3-small }
+
+# USD per million tokens. DeepSeek uses peak rates so estimates stay conservative.
+# OpenAI gpt-5.6-sol is promotional $4/$20 through at least 2026-11-21 (spec draft had $5/$30).
+pricing_usd_per_mtok:
+  gpt-5.6-terra:
+    input: 2.00
+    output: 12.00
+    cached_input: 0.20
+    batch_multiplier: 0.5
+  gpt-5.6-sol:
+    input: 4.00
+    output: 20.00
+    cached_input: 0.40
+    batch_multiplier: 0.5
+  deepseek-v4-pro:
+    input: 1.32
+    output: 3.96
+    cached_input: 0.044
+  deepseek-v4-flash:
+    input: 0.44
+    output: 1.32
+    cached_input: 0.014
+  text-embedding-3-small:
+    input: 0.02
+    output: 0
+
+extraction:
+  batch_size: 15
+  temperature: 0
+  max_review_chars: 2000
+  llm_concurrency: 8
+  use_openai_batch_api: true
+  prompt_version: "v3"
+
+aggregation:
+  min_n: 50
+  duplicate_similarity_threshold: 0.92
+  incentivized_exclusion_threshold: 0.6
+  momentum_window_days: 30

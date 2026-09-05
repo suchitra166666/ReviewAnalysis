@@ -1,0 +1,186 @@
+# Seeded into app_settings on first run only.
+settings:
+  # models
+  - key: models.roles
+    value:
+      extract_a: { provider: openai, model: gpt-5.6-terra }
+      extract_b: { provider: deepseek, model: deepseek-v4-pro }
+      tiebreak: { provider: openai, model: gpt-5.6-sol }
+      translate: { provider: deepseek, model: deepseek-v4-flash }
+      summarize: { provider: openai, model: gpt-5.6-sol }
+      embed: { provider: openai, model: text-embedding-3-small }
+    value_type: json
+    group: models
+    label: Model roles
+    description: Provider and model ID for each pipeline role. Editable in Settings.
+  - key: models.pricing
+    value:
+      gpt-5.6-terra: { input: 2.00, output: 12.00, cached_input: 0.20, batch_multiplier: 0.5 }
+      gpt-5.6-sol: { input: 4.00, output: 20.00, cached_input: 0.40, batch_multiplier: 0.5 }
+      deepseek-v4-pro: { input: 1.32, output: 3.96, cached_input: 0.044 }
+      deepseek-v4-flash: { input: 0.44, output: 1.32, cached_input: 0.014 }
+      text-embedding-3-small: { input: 0.02, output: 0 }
+    value_type: json
+    group: models
+    label: Model prices
+    description: USD per million tokens. Used only for cost estimates.
+  - key: models.use_single_model
+    value: false
+    value_type: bool
+    group: models
+    label: Use single model for everything
+    description: Sets extract B to the same model as A. Reconciliation then runs A twice (self-consistency) instead of A vs B.
+
+  # costs
+  - key: costs.max_run_cost_usd
+    value: 25
+    value_type: number
+    group: costs
+    label: Maximum run cost
+    description: Abort a job if its estimate exceeds this amount in USD.
+  - key: costs.require_confirmation_above_usd
+    value: 5
+    value_type: number
+    group: costs
+    label: Require confirmation above
+    description: Ask before running any job whose estimate exceeds this amount in USD.
+
+  # scraping
+  - key: scraping.delay_seconds
+    value: 1.5
+    value_type: number
+    group: scraping
+    label: Delay between requests
+    description: Seconds to wait between scrape page requests.
+  - key: scraping.max_pages_per_run
+    value: 50
+    value_type: number
+    group: scraping
+    label: Max pages per run
+    description: Stop a scrape after this many pages even if more exist.
+  - key: scraping.country_code
+    value: ae
+    value_type: string
+    group: scraping
+    label: Country code
+    description: Storefront country. Default is the UAE storefront.
+  - key: scraping.languages
+    value: [en, ar]
+    value_type: json
+    group: scraping
+    label: Languages
+    description: Play Store languages to fetch. Reviews are then de-duplicated by store review ID.
+  - key: scraping.use_batch_api
+    value: true
+    value_type: bool
+    group: scraping
+    label: Use batch API
+    description: Prefer the OpenAI Batch API for extraction when the provider supports it.
+
+  # extraction
+  - key: extraction.batch_size
+    value: 15
+    value_type: number
+    group: extraction
+    label: Batch size
+    description: Reviews sent in one extraction call.
+  - key: extraction.temperature
+    value: 0
+    value_type: number
+    group: extraction
+    label: Temperature
+    description: Sampling temperature for extraction calls.
+  - key: extraction.max_review_chars
+    value: 2000
+    value_type: number
+    group: extraction
+    label: Max review characters
+    description: Truncate review body to this many characters before sending to a model.
+  - key: extraction.llm_concurrency
+    value: 8
+    value_type: number
+    group: extraction
+    label: LLM concurrency
+    description: Parallel LLM calls per provider. Applies to OpenAI and DeepSeek.
+  - key: extraction.prompt_version
+    value: v3
+    value_type: string
+    group: extraction
+    label: Prompt version
+    description: Active extraction prompt. Read-only.
+  - key: extraction.sample_per_star
+    value: null
+    value_type: json
+    group: extraction
+    label: Sample per star
+    description: If set, extract at most this many reviews per star rating. Null means all.
+
+  # aggregation
+  - key: aggregation.min_n
+    value: 50
+    value_type: number
+    group: aggregation
+    label: Minimum n
+    description: Below this used-review count, cards are marked low confidence.
+  - key: aggregation.duplicate_similarity_threshold
+    value: 0.92
+    value_type: number
+    group: aggregation
+    label: Duplicate similarity threshold
+    description: Cosine similarity at or above this value marks a near-duplicate.
+  - key: aggregation.incentivized_exclusion_threshold
+    value: 0.6
+    value_type: number
+    group: aggregation
+    label: Incentivized exclusion threshold
+    description: Exclude a review from aggregates when its incentivized score is at or above this value.
+  - key: aggregation.momentum_window_days
+    value: 30
+    value_type: number
+    group: aggregation
+    label: Momentum window
+    description: Days in each half of the momentum comparison.
+  - key: aggregation.ipa_mention_threshold
+    value: median
+    value_type: string
+    group: aggregation
+    label: IPA mention threshold
+    description: How high mention share is decided. "median" uses the median across themes.
+  - key: aggregation.ipa_sentiment_threshold
+    value: 0
+    value_type: number
+    group: aggregation
+    label: IPA sentiment threshold
+    description: Net sentiment at or below this value is treated as negative performance.
+  - key: aggregation.incentivized_weights
+    value: { mentions_incentive: 0.5, near_duplicate: 0.3, burst: 0.1, five_star_low_info: 0.1 }
+    value_type: json
+    group: aggregation
+    label: Incentivized score weights
+    description: Weights for the incentivized-review score.
+
+  # display
+  - key: display.default_view
+    value: manager
+    value_type: string
+    group: display
+    label: Default view
+    description: Executive, Manager, or Analyst.
+  - key: display.default_date_preset
+    value: 90d
+    value_type: string
+    group: display
+    label: Default date preset
+    description: 30d, 90d, 12m, since_launch, or custom.
+  - key: display.show_arabic_translations
+    value: true
+    value_type: bool
+    group: display
+    label: Show Arabic translations
+    description: Render the English line under Arabic review text.
+  - key: display.timezone
+    value: Asia/Dubai
+    value_type: string
+    group: display
+    label: Timezone
+    description: Timezone used for date labels and "data as of".

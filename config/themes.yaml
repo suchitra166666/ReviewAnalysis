@@ -1,0 +1,139 @@
+themes:
+  late_delivery:
+    label: "Late delivery"
+    journey_stage: wait_track
+    kano: must_be
+    sub_themes:
+      - eta_inaccurate
+      - very_late_60min_plus
+      - stuck_at_restaurant
+      - rider_detour_multiple_drops
+      - early_or_on_time_praise
+  missing_wrong_items:
+    label: "Missing or wrong items"
+    journey_stage: receive
+    kano: must_be
+    sub_themes:
+      - item_missing
+      - wrong_item
+      - wrong_order_entirely
+      - substitution_without_consent
+      - special_instructions_ignored
+  food_condition:
+    label: "Food arrived cold / damaged"
+    journey_stage: receive
+    kano: must_be
+    sub_themes:
+      - cold
+      - spilled_leaked
+      - poor_packaging
+      - tampered_seal
+      - good_condition_praise
+  refund_compensation:
+    label: "Refunds & compensation"
+    journey_stage: recover_support
+    kano: must_be
+    sub_themes:
+      - refund_refused
+      - refund_delayed
+      - partial_refund_only
+      - credit_instead_of_cash
+      - refund_handled_well
+  customer_support:
+    label: "Customer support"
+    journey_stage: recover_support
+    kano: performance
+    sub_themes:
+      - no_response
+      - bot_only_no_human
+      - slow_response
+      - unhelpful_scripted
+      - support_praise
+  app_bugs:
+    label: "App bugs & crashes"
+    journey_stage: order_checkout
+    kano: performance
+    sub_themes:
+      - crash_on_open
+      - freeze_at_checkout
+      - tracking_not_updating
+      - login_issues
+      - notifications_broken
+      - ui_praise
+    stage_overrides:
+      tracking_not_updating: wait_track
+  payment_checkout:
+    label: "Payment & checkout"
+    journey_stage: order_checkout
+    kano: must_be
+    sub_themes:
+      - card_declined
+      - double_charged
+      - cod_issues
+      - wallet_balance_problems
+      - apple_google_pay_issues
+  fees_pricing:
+    label: "Fees & pricing"
+    journey_stage: discover_browse
+    kano: performance
+    sub_themes:
+      - delivery_fee_high
+      - service_fee_hidden
+      - surge_pricing
+      - menu_price_markup
+      - good_value_praise
+  promotions:
+    label: "Discounts & promotions"
+    journey_stage: discover_browse
+    kano: delighter
+    sub_themes:
+      - promo_code_failed
+      - first_order_discount
+      - free_delivery
+      - subscription_program
+      - promo_praise
+      - promo_ended_complaint
+    stage_overrides:
+      promo_code_failed: order_checkout
+  rider_behaviour:
+    label: "Rider behaviour"
+    journey_stage: receive
+    kano: delighter
+    sub_themes:
+      - rude_or_unprofessional
+      - could_not_find_address
+      - called_repeatedly
+      - unsafe_riding
+      - rider_praise
+    stage_overrides:
+      could_not_find_address: wait_track
+      called_repeatedly: wait_track
+  restaurant_availability:
+    label: "Restaurant availability & selection"
+    journey_stage: discover_browse
+    kano: performance
+    sub_themes:
+      - restaurant_shown_open_but_closed
+      - limited_selection_in_area
+      - favourite_missing
+      - wide_selection_praise
+  account_trust:
+    label: "Account & trust"
+    journey_stage: recover_support
+    kano: must_be
+    sub_themes:
+      - account_banned_unfairly
+      - unexpected_charge
+      - data_privacy_concern
+      - fake_ratings_suspected
+  other:
+    label: "Other"
+    journey_stage: null
+    kano: null
+    sub_themes: []
+
+journey_stages: [discover_browse, order_checkout, wait_track, receive, recover_support]
+kano_classes: [must_be, performance, delighter]
+sentiments: [positive, negative, neutral, mixed]
+languages: [en, ar, mixed, other]
+feedback_types: [bug_report, feature_request, complaint, praise, question, other]

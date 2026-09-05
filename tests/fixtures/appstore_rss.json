@@ -1,0 +1,19 @@
+[
+  {
+    "id": {"label": "as-1"},
+    "title": {"label": "Late"},
+    "content": {"label": "وصلت متأخر جدا"},
+    "im:rating": {"label": "1"},
+    "author": {"name": {"label": "Layla"}},
+    "updated": {"label": "2026-02-01T08:00:00Z"},
+    "im:version": {"label": "3.1"}
+  },
+  {
+    "id": {"label": "as-2"},
+    "title": {"label": "Great"},
+    "content": {"label": "On time every time"},
+    "im:rating": {"label": "5"},
+    "author": {"name": {"label": "Sam"}},
+    "updated": {"label": "2026-02-02T08:00:00Z"}
+  }
+]

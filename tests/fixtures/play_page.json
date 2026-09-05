@@ -1,0 +1,27 @@
+[
+  {
+    "reviewId": "gp-1",
+    "userName": "Amina",
+    "content": "The rider was late by an hour.",
+    "score": 2,
+    "at": "2026-01-15T10:00:00Z",
+    "thumbsUpCount": 3,
+    "reviewCreatedVersion": "12.0",
+    "replyContent": "Sorry about that",
+    "repliedAt": "2026-01-16T10:00:00Z"
+  },
+  {
+    "reviewId": "gp-2",
+    "userName": "Omar",
+    "content": "Excellent and fast.",
+    "score": 5,
+    "at": "2026-01-16T10:00:00Z"
+  },
+  {
+    "reviewId": "gp-1",
+    "userName": "Amina",
+    "content": "duplicate id",
+    "score": 2,
+    "at": "2026-01-15T10:00:00Z"
+  }
+]
