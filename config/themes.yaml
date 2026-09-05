@@ -1,6 +1,7 @@
 themes:
   late_delivery:
     label: "Late delivery"
+    positive_label: "Deliveries arrive on time"
     journey_stage: wait_track
     kano: must_be
     sub_themes:
@@ -11,6 +12,7 @@ themes:
       - early_or_on_time_praise
   missing_wrong_items:
     label: "Missing or wrong items"
+    positive_label: "Orders arrive complete and correct"
     journey_stage: receive
     kano: must_be
     sub_themes:
@@ -21,6 +23,7 @@ themes:
       - special_instructions_ignored
   food_condition:
     label: "Food arrived cold / damaged"
+    positive_label: "Food arrives hot and intact"
     journey_stage: receive
     kano: must_be
     sub_themes:
@@ -31,6 +34,7 @@ themes:
       - good_condition_praise
   refund_compensation:
     label: "Refunds & compensation"
+    positive_label: "Refunds handled fairly"
     journey_stage: recover_support
     kano: must_be
     sub_themes:
@@ -41,6 +45,7 @@ themes:
       - refund_handled_well
   customer_support:
     label: "Customer support"
+    positive_label: "Helpful customer support"
     journey_stage: recover_support
     kano: performance
     sub_themes:
@@ -51,6 +56,7 @@ themes:
       - support_praise
   app_bugs:
     label: "App bugs & crashes"
+    positive_label: "App works smoothly"
     journey_stage: order_checkout
     kano: performance
     sub_themes:
@@ -64,6 +70,7 @@ themes:
       tracking_not_updating: wait_track
   payment_checkout:
     label: "Payment & checkout"
+    positive_label: "Payment and checkout work"
     journey_stage: order_checkout
     kano: must_be
     sub_themes:
@@ -74,6 +81,7 @@ themes:
       - apple_google_pay_issues
   fees_pricing:
     label: "Fees & pricing"
+    positive_label: "Good value for money"
     journey_stage: discover_browse
     kano: performance
     sub_themes:
@@ -84,6 +92,7 @@ themes:
       - good_value_praise
   promotions:
     label: "Discounts & promotions"
+    positive_label: "Discounts and offers appreciated"
     journey_stage: discover_browse
     kano: delighter
     sub_themes:
@@ -97,6 +106,7 @@ themes:
       promo_code_failed: order_checkout
   rider_behaviour:
     label: "Rider behaviour"
+    positive_label: "Polite, professional riders"
     journey_stage: receive
     kano: delighter
     sub_themes:
@@ -110,6 +120,7 @@ themes:
       called_repeatedly: wait_track
   restaurant_availability:
     label: "Restaurant availability & selection"
+    positive_label: "Wide choice of restaurants"
     journey_stage: discover_browse
     kano: performance
     sub_themes:
@@ -119,6 +130,7 @@ themes:
       - wide_selection_praise
   account_trust:
     label: "Account & trust"
+    positive_label: "Account and billing trusted"
     journey_stage: recover_support
     kano: must_be
     sub_themes:
@@ -128,6 +140,7 @@ themes:
       - fake_ratings_suspected
   other:
     label: "Other"
+    positive_label: "Other"
     journey_stage: null
     kano: null
     sub_themes: []

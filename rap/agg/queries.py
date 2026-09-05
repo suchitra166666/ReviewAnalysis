@@ -282,9 +282,11 @@ def _theme_rows(s: CompanySlice, sentiment: str) -> list[ThemeRow]:
             ThemeRow(
                 theme=theme,
                 label=meta.get("label") or theme,
+                positive_label=meta.get("positive_label"),
                 journey_stage=meta.get("journey_stage"),
                 kano=meta.get("kano"),
                 mention_share=mention_share,
+                n_mentions=len(items),
                 negative_rate=neg_rate,
                 positive_rate=pos_rate,
                 negative_ci=_interval(neg_ci),
@@ -352,8 +354,13 @@ def pain_points(ident, date_from=None, date_to=None, filters=None, **kwargs) -> 
     return [r for r in rows if r.theme != "other"]
 
 
+STRENGTH_MIN_POSITIVE = 0.5
+
+
 def strengths(ident, date_from=None, date_to=None, filters=None, **kwargs) -> list[ThemeRow]:
-    return _theme_rows(load_slice(ident, date_from, date_to, filters, **kwargs), "positive")
+    rows = _theme_rows(load_slice(ident, date_from, date_to, filters, **kwargs), "positive")
+    # a theme is only a strength when praise outweighs complaints; "other" is not actionable
+    return [r for r in rows if r.theme != "other" and r.positive_rate >= STRENGTH_MIN_POSITIVE]
 
 
 def theme_matrix(ident, date_from=None, date_to=None, filters=None, **kwargs) -> list[ThemeRow]:

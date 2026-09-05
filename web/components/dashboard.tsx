@@ -466,18 +466,38 @@ function PainCol({ company, rows, color, onTheme, explanations }: AnyRec) {
   );
 }
 
+/** Themes are named as problems; when praised they need the positive wording. */
+function strengthLabel(row: AnyRec): string {
+  return row.positive_label || `${row.label} (praised)`;
+}
+
 function StrengthCol({ company, rows, color, onTheme }: AnyRec) {
+  // guard for older saved snapshots that were stored before the API applied the floor
+  const shown = (rows ?? []).filter((row: AnyRec) => row.theme !== "other" && (row.positive_rate ?? 0) >= 0.5);
   return (
     <Card className={color === "a" ? "border-l-[3px] border-l-a" : "border-l-[3px] border-l-b"}>
-      <h3 className="text-card">{company} · strengths</h3>
-      <div className="mt-3 space-y-2">
-        {(rows ?? []).map((row: AnyRec) => (
-          <button key={row.theme} type="button" className="block w-full text-left text-small" onClick={() => onTheme(row.theme)}>
-            {row.label} · {formatPct(row.positive_rate ?? row.negative_rate)}
-          </button>
-        ))}
-        {!(rows ?? []).length ? <p className="text-caption text-fg-3">No strengths in this range.</p> : null}
-      </div>
+      <h3 className={`text-card ${color === "a" ? "text-a" : "text-b"}`}>{company} · what customers praise</h3>
+      {shown.length ? (
+        <ul className="mt-3 space-y-3">
+          {shown.map((row: AnyRec) => {
+            const share = inTen(row.positive_rate);
+            const n = typeof row.n_mentions === "number" ? row.n_mentions : null;
+            return (
+              <li key={row.theme}>
+                <button type="button" className="block w-full text-left" onClick={() => onTheme(row.theme)}>
+                  <span className="text-small text-fg">{strengthLabel(row)}</span>
+                  <span className="mt-0.5 block text-caption text-fg-2">
+                    {share === "nearly every" ? "Nearly every mention is praise" : `Praised in ${share} mentions`}
+                    {n != null ? ` · ${n} ${n === 1 ? "review mentions" : "reviews mention"} it` : ""}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-3 text-caption text-fg-3">No clear strengths yet: nothing is praised more often than it is criticised.</p>
+      )}
     </Card>
   );
 }

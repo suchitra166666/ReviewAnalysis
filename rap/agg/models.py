@@ -84,9 +84,13 @@ class StarScenarioOut(BaseModel):
 class ThemeRow(BaseModel):
     theme: str
     label: str
+    # how the theme reads when it is a strength ("Deliveries arrive on time")
+    positive_label: str | None = None
     journey_stage: str | None
     kano: str | None
     mention_share: float
+    # distinct reviews that mention the theme (unweighted)
+    n_mentions: int = 0
     negative_rate: float
     positive_rate: float
     negative_ci: IntervalOut | None = None
