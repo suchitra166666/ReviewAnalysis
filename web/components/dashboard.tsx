@@ -26,7 +26,7 @@ import { CompareCard } from "@/components/CompareCard";
 import { MetricLabel } from "@/components/MetricLabel";
 import { Sparkline } from "@/components/Sparkline";
 import { Button, Card, Pill, Skeleton } from "@/components/ui";
-import { apiGet, type MetricDef } from "@/lib/api";
+import { API_BASE, apiGet, type MetricDef } from "@/lib/api";
 import { formatCount, formatPct, formatStars } from "@/lib/delta";
 
 type AnyRec = Record<string, any>;
@@ -1368,7 +1368,7 @@ export function Explorer({ company, extra, q }: { company: string; extra: AnyRec
             placeholder="theme slug"
           />
         </label>
-        <a className="inline-flex h-10 items-center text-small text-fg-2" href={`http://localhost:8000/export.csv?company=${company}&${q}`}>
+        <a className="inline-flex h-10 items-center text-small text-fg-2" href={`${API_BASE}/export.csv?company=${company}&${q}`}>
           Export CSV
         </a>
       </div>

@@ -9,6 +9,13 @@ from rap.logging_util import configure_logging
 from rap.settings import bootstrap, stored_key_fragments
 
 
+def _run_migrations() -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    command.upgrade(Config("alembic.ini"), "head")
+
+
 def create_app() -> FastAPI:
     try:
         settings_encryption_key()
@@ -16,6 +23,7 @@ def create_app() -> FastAPI:
         raise RuntimeError(
             "SETTINGS_ENCRYPTION_KEY is missing. Run `make init` before starting the API."
         ) from exc
+    _run_migrations()
     formatter = configure_logging()
     bootstrap()
     formatter.set_secrets(stored_key_fragments())
@@ -23,6 +31,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_origin_regex=r"https://.*\.(up\.railway\.app|railway\.app)",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

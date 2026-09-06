@@ -299,9 +299,12 @@ def worker() -> None:
 
 @app.command()
 def api(host: str = "0.0.0.0", port: int = 8000) -> None:
+    import os
+
     import uvicorn
 
-    uvicorn.run("rap.api.main:app", host=host, port=port, factory=False)
+    bound = int(os.environ.get("PORT") or port)
+    uvicorn.run("rap.api.main:app", host=host, port=bound, factory=False)
 
 
 @app.command("print-extract")

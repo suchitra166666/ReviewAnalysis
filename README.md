@@ -22,6 +22,10 @@ SETTINGS_ENCRYPTION_KEY=<fernet-key>
 
 Keys, models, thresholds, and companies are edited in the web Settings screen after that. Editing YAML files after the first run does nothing unless you click Reset to defaults.
 
+## Deploy on Railway
+
+The public dashboard is meant to run as four Railway services (Postgres with pgvector, API, worker, web). See `deploy/railway.md`.
+
 ## Screenshots
 
 Place Phase 6 screenshots here after the first real dashboard run:

@@ -43,7 +43,15 @@ def get_env(key: str) -> str:
 
 
 def database_url() -> str:
-    return get_env("DATABASE_URL")
+    url = get_env("DATABASE_URL")
+    # Railway and many hosts inject postgres://; SQLAlchemy 2 wants a driver name
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if "sslmode=" not in url and ".railway.app" in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
+    return url
 
 
 def settings_encryption_key() -> str:
