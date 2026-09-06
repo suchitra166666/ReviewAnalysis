@@ -22,7 +22,7 @@ Shared (or set on api + worker):
 
 Web:
 
-- `API_INTERNAL_URL` — `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8000`
-- `PORT` — Railway sets this
+- `API_INTERNAL_URL` — `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8000` (set `PORT=8000` on api so this port matches)
+- `PORT` — Railway sets this; pin api to `8000`
 
 After the first deploy, open the **web** URL, paste OpenAI/DeepSeek keys in Settings, then run the pipeline. Keys stay in the encrypted Settings store, not in Railway variables.
