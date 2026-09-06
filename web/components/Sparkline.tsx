@@ -1,9 +1,17 @@
 "use client";
 
-export function Sparkline({ values, color }: { values: number[]; color: string }) {
-  if (!values.length) return <div className="h-8" />;
-  const w = 120;
-  const h = 32;
+export function Sparkline({
+  values,
+  color,
+  compact = false,
+}: {
+  values: number[];
+  color: string;
+  compact?: boolean;
+}) {
+  if (!values.length) return <div className={compact ? "h-6" : "h-8"} />;
+  const w = compact ? 88 : 140;
+  const h = compact ? 24 : 36;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
@@ -15,7 +23,7 @@ export function Sparkline({ values, color }: { values: number[]; color: string }
   const last = pts[pts.length - 1].split(",");
   return (
     <svg width={w} height={h} aria-hidden="true">
-      <polyline fill="none" stroke={color} strokeWidth="1.5" points={pts.join(" ")} />
+      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={pts.join(" ")} />
       <circle cx={last[0]} cy={last[1]} r="2" fill={color} />
     </svg>
   );

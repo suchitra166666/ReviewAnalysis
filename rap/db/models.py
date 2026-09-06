@@ -394,3 +394,28 @@ class WorkerHeartbeat(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     worker_id: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
     last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SiteVisitor(Base):
+    """Anonymous browser session for traffic counts and visitor-owned keys."""
+
+    __tablename__ = "site_visitors"
+
+    visitor_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    first_seen: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    keys: Mapped[list["SiteVisitorKey"]] = relationship(back_populates="visitor")
+
+
+class SiteVisitorKey(Base):
+    __tablename__ = "site_visitor_keys"
+    __table_args__ = (UniqueConstraint("visitor_id", "provider_slug", name="uq_visitor_provider"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visitor_id: Mapped[str] = mapped_column(ForeignKey("site_visitors.visitor_id"), nullable=False)
+    provider_slug: Mapped[str] = mapped_column(String(80), nullable=False)
+    api_key_encrypted: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    key_last4: Mapped[str] = mapped_column(String(8), nullable=False)
+    last_verify_status: Mapped[str | None] = mapped_column(String(40))
+    last_verified_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    visitor: Mapped[SiteVisitor] = relationship(back_populates="keys")

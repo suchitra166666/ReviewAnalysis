@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from rap.api.routes import analysis, health, history, jobs, settings
+from rap.api.routes import analysis, health, history, jobs, presence, settings
 from rap.env import settings_encryption_key
 from rap.logging_util import configure_logging
 from rap.settings import bootstrap, stored_key_fragments
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(settings.router)
     app.include_router(jobs.router)
     app.include_router(history.router)
+    app.include_router(presence.router)
     return app
 
 

@@ -18,14 +18,7 @@ def health() -> dict:
     try:
         with session_scope() as session:
             session.execute(text("SELECT 1"))
-            providers = [
-                {
-                    "slug": row.provider_slug,
-                    "has_key": row.api_key_encrypted is not None,
-                    "last_verify_status": row.last_verify_status,
-                }
-                for row in session.scalars(select(ApiCredential))
-            ]
+            providers = [{"slug": row.provider_slug} for row in session.scalars(select(ApiCredential))]
     except Exception as exc:
         db = f"error: {exc}"
         providers = []

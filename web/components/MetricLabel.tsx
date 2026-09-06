@@ -7,11 +7,13 @@ export function MetricLabel({
   metricKey,
   glossary,
   n,
+  compact = false,
   className = "",
 }: {
   metricKey: string;
   glossary: Record<string, MetricDef>;
   n?: number;
+  compact?: boolean;
   className?: string;
 }) {
   const def = glossary[metricKey];
@@ -22,10 +24,11 @@ export function MetricLabel({
       <span className="relative group inline-flex">
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center text-fg-3"
+          className={`inline-flex items-center justify-center text-fg-3 ${compact ? "h-5 w-5" : "h-8 w-8"}`}
           aria-label={`About ${label}`}
+          onClick={(e) => e.stopPropagation()}
         >
-          <Info size={16} strokeWidth={1.5} />
+          <Info size={compact ? 13 : 16} strokeWidth={1.5} />
         </button>
         <span className="pointer-events-none absolute left-0 top-full z-20 hidden w-72 rounded-control border border-border bg-bg p-3 text-left text-caption text-fg shadow-none group-hover:block group-focus-within:block">
           <span className="block text-small text-fg">{def?.meaning ?? "No glossary entry yet."}</span>

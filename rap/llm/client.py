@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from rap.db.models import ApiCredential, LlmCall, LlmPurpose
 from rap.db.session import session_scope
-from rap.llm.context import current_job_id
+from rap.llm.context import current_job_id, current_visitor_id
 from rap.settings import (
     decrypt_key,
     get_setting,
@@ -52,11 +52,20 @@ def _provider_row(slug: str) -> ApiCredential:
 
 def _client_for(slug: str) -> tuple[OpenAI, ApiCredential, str]:
     row = _provider_row(slug)
-    if not row.api_key_encrypted:
+    visitor_id = current_visitor_id.get()
+    key = None
+    if visitor_id:
+        from rap.visitors import decrypt_visitor_key
+
+        key = decrypt_visitor_key(visitor_id, slug)
+        if not key:
+            raise RuntimeError(f"Add your {row.display_name} key to get started.")
+    elif row.api_key_encrypted:
+        key = decrypt_key(row.api_key_encrypted)
+    if not key:
         raise RuntimeError(
             f"Provider {slug} has no API key. Add it in Settings. There is no environment-variable fallback."
         )
-    key = decrypt_key(row.api_key_encrypted)
     client = OpenAI(api_key=key, base_url=row.base_url)
     return client, row, key
 
@@ -229,11 +238,17 @@ def test_connection(slug: str) -> dict[str, Any]:
         except Exception as listing:
             status = "failed"
             error = error or str(listing)
-    with session_scope() as session:
-        row = session.scalar(select(ApiCredential).where(ApiCredential.provider_slug == slug))
-        if row:
-            row.last_verified_at = dt.datetime.now(dt.timezone.utc)
-            row.last_verify_status = status
+    visitor_id = current_visitor_id.get()
+    if visitor_id:
+        from rap.visitors import mark_visitor_verify
+
+        mark_visitor_verify(visitor_id, slug, status)
+    else:
+        with session_scope() as session:
+            row = session.scalar(select(ApiCredential).where(ApiCredential.provider_slug == slug))
+            if row:
+                row.last_verified_at = dt.datetime.now(dt.timezone.utc)
+                row.last_verify_status = status
     return {"status": status, "error": error, "note": note, "model": model}
 
 

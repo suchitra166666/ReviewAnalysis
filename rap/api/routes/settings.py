@@ -3,17 +3,15 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from rap.db.models import ApiCredential, Company, ReviewRaw, SettingValueType
+from rap.db.models import ApiCredential, Company, ReviewRaw
 from rap.db.session import session_scope
 from rap.scrape.lookup import lookup_company_ids
 from rap.seed import seed_providers, seed_settings
 from rap.settings import (
-    decrypt_key,
-    encrypt_key,
     get_setting,
     invalidate_cache,
     list_settings,
@@ -52,20 +50,27 @@ class CompanyDelete(BaseModel):
     confirm_slug: str | None = None
 
 
-def _provider_public(row: ApiCredential) -> dict[str, Any]:
+def _provider_public(row: ApiCredential, visitor_keys: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    own = (visitor_keys or {}).get(row.provider_slug) or {}
     return {
         "slug": row.provider_slug,
         "display_name": row.display_name,
         "base_url": row.base_url,
-        "has_key": row.api_key_encrypted is not None,
-        "key_last4": row.key_last4,
+        "has_key": bool(own.get("has_key")),
+        "key_last4": own.get("key_last4"),
         "is_openai_compatible": row.is_openai_compatible,
         "supports_batch": row.supports_batch,
         "supports_structured_outputs": row.supports_structured_outputs,
         "disable_thinking": row.disable_thinking,
-        "last_verified_at": row.last_verified_at.isoformat() if row.last_verified_at else None,
-        "last_verify_status": row.last_verify_status,
+        "last_verified_at": own.get("last_verified_at"),
+        "last_verify_status": own.get("last_verify_status"),
     }
+
+
+def _visitor_from_header(x_visitor_id: str | None) -> str | None:
+    from rap.visitors import normalize_visitor_id
+
+    return normalize_visitor_id(x_visitor_id)
 
 
 def _company_public(row: Company) -> dict[str, Any]:
@@ -114,15 +119,31 @@ def import_settings(body: SettingUpdate) -> dict[str, Any]:
 
 
 @router.get("/providers")
-def get_providers() -> list[dict[str, Any]]:
+def get_providers(x_visitor_id: str | None = Header(default=None, alias="X-Visitor-Id")) -> list[dict[str, Any]]:
+    from rap.visitors import visitor_key_public
+
+    visitor_id = _visitor_from_header(x_visitor_id)
+    own = visitor_key_public(visitor_id) if visitor_id else {}
     with session_scope() as session:
         seed_providers(session)
         rows = session.scalars(select(ApiCredential).order_by(ApiCredential.provider_slug)).all()
-        return [_provider_public(r) for r in rows]
+        return [_provider_public(r, own) for r in rows]
 
 
 @router.put("/providers/{slug}")
-def put_provider(slug: str, body: ProviderUpsert) -> dict[str, Any]:
+def put_provider(
+    slug: str,
+    body: ProviderUpsert,
+    x_visitor_id: str | None = Header(default=None, alias="X-Visitor-Id"),
+) -> dict[str, Any]:
+    visitor_id = _visitor_from_header(x_visitor_id)
+    if body.api_key:
+        if not visitor_id:
+            raise HTTPException(400, "Add your key from the dashboard so it stays on your browser only.")
+        from rap.visitors import save_visitor_key
+
+        save_visitor_key(visitor_id, slug, body.api_key)
+        body.api_key = None
     with session_scope() as session:
         row = session.scalar(select(ApiCredential).where(ApiCredential.provider_slug == slug))
         if row is None:
@@ -151,13 +172,11 @@ def put_provider(slug: str, body: ProviderUpsert) -> dict[str, Any]:
                 row.supports_structured_outputs = body.supports_structured_outputs
             if body.disable_thinking is not None:
                 row.disable_thinking = body.disable_thinking
-        if body.api_key:
-            row.api_key_encrypted = encrypt_key(body.api_key)
-            row.key_last4 = body.api_key[-4:]
-            row.last_verify_status = None
-            row.last_verified_at = None
         session.flush()
-        return _provider_public(row)
+        from rap.visitors import visitor_key_public
+
+        own = visitor_key_public(visitor_id) if visitor_id else {}
+        return _provider_public(row, own)
 
 
 @router.delete("/providers/{slug}")
@@ -173,9 +192,20 @@ def delete_provider(slug: str) -> dict[str, str]:
 
 
 @router.post("/providers/{slug}/test")
-def test_provider(slug: str) -> dict[str, Any]:
+def test_provider(slug: str, x_visitor_id: str | None = Header(default=None, alias="X-Visitor-Id")) -> dict[str, Any]:
     from rap.llm.client import test_connection
+    from rap.llm.context import current_visitor_id
+    from rap.visitors import decrypt_visitor_key
 
+    visitor_id = _visitor_from_header(x_visitor_id)
+    if visitor_id:
+        if not decrypt_visitor_key(visitor_id, slug):
+            raise HTTPException(400, "Add your OpenAI or DeepSeek key to get started.")
+        token = current_visitor_id.set(visitor_id)
+        try:
+            return test_connection(slug)
+        finally:
+            current_visitor_id.reset(token)
     with session_scope() as session:
         row = session.scalar(select(ApiCredential).where(ApiCredential.provider_slug == slug))
         if row is None or row.api_key_encrypted is None:
@@ -238,22 +268,16 @@ def lookup_companies(name: str) -> dict[str, Any]:
 
 
 @router.get("/setup-status")
-def setup_status() -> dict[str, Any]:
+def setup_status(x_visitor_id: str | None = Header(default=None, alias="X-Visitor-Id")) -> dict[str, Any]:
+    from rap.visitors import visitor_has_key
+
+    visitor_id = _visitor_from_header(x_visitor_id)
     with session_scope() as session:
-        verified = session.scalar(
-            select(func.count())
-            .select_from(ApiCredential)
-            .where(ApiCredential.last_verify_status == "ok")
-        ) or 0
-        has_key = session.scalar(
-            select(func.count()).select_from(ApiCredential).where(ApiCredential.api_key_encrypted.is_not(None))
-        ) or 0
         n_companies = session.scalar(
             select(func.count()).select_from(Company).where(Company.hidden.is_(False))
         ) or 0
     return {
-        "ready": verified >= 1 and n_companies >= 2,
-        "verified_providers": int(verified),
-        "providers_with_keys": int(has_key),
+        "ready": n_companies >= 2,
+        "has_own_key": bool(visitor_id and visitor_has_key(visitor_id)),
         "companies": int(n_companies),
     }

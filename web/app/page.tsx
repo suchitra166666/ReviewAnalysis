@@ -123,10 +123,6 @@ export default function DashboardPage() {
   const listed = sortCompanies(companies.data ?? []);
 
   useEffect(() => {
-    if (setup.data && !setup.data.ready) router.replace("/setup");
-  }, [setup.data, router]);
-
-  useEffect(() => {
     if (!listed.length || !ready || frozen) return;
     if (!state.a || !state.b) {
       const next = {

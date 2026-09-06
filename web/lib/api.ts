@@ -1,7 +1,9 @@
+import { visitorHeaders } from "@/lib/visitor";
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/backend";
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: visitorHeaders() });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `Request failed: ${res.status}`);
@@ -23,7 +25,7 @@ function errorMessage(text: string, status: number): string {
 export async function apiSend<T>(path: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...visitorHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) {

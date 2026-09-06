@@ -23,8 +23,8 @@ import {
 } from "recharts";
 import { ArabicText } from "@/components/ArabicText";
 import { CompareCard } from "@/components/CompareCard";
+import { KpiScoreboard } from "@/components/KpiScoreboard";
 import { MetricLabel } from "@/components/MetricLabel";
-import { Sparkline } from "@/components/Sparkline";
 import { Button, Card, Pill, Skeleton } from "@/components/ui";
 import { API_BASE, apiGet, type MetricDef } from "@/lib/api";
 import { formatCount, formatPct, formatStars } from "@/lib/delta";
@@ -51,14 +51,14 @@ function SectionFrame({
   );
 }
 
-function Kpi({ value }: { value: string }) {
-  return <p className="text-kpi text-fg">{value}</p>;
+function ciNote(ci?: { low?: number; high?: number } | null): string | undefined {
+  if (!ci || ci.low == null || ci.high == null) return undefined;
+  return `±${(Math.abs((ci.high - ci.low) / 2) * 100).toFixed(1)}`;
 }
 
-function Ci({ ci }: { ci?: { low?: number; high?: number } | null }) {
-  if (!ci || ci.low == null || ci.high == null) return null;
-  const span = Math.abs((ci.high - ci.low) / 2);
-  return <p className="text-caption text-fg-3">±{(span * 100).toFixed(1)}</p>;
+function storeNote(stars?: number | null, store?: number | null): string | undefined {
+  if (stars == null || store == null || Math.abs(stars - store) < 0.15) return undefined;
+  return `Store listing ${formatStars(store)}`;
 }
 
 export function SummarySection({
@@ -97,12 +97,12 @@ export function CompanyLegend({
   nameA,
   nameB,
   note,
-  sides = true,
+  sides: _sides = true,
 }: {
   nameA: string;
   nameB: string;
   note?: string;
-  /** Mention left/right placement (side-by-side cards) or just the colours (charts). */
+  /** Kept so existing call sites stay valid. */
   sides?: boolean;
 }) {
   return (
@@ -110,24 +110,12 @@ export function CompanyLegend({
       <span className="inline-flex items-center gap-1.5">
         <span className="inline-block h-2.5 w-2.5 rounded-pill bg-a" aria-hidden />
         <span className="text-fg-2">{nameA}</span>
-        {sides ? (
-          <>
-            <span className="hidden md:inline">left</span>
-            <span className="md:hidden">top</span>
-          </>
-        ) : null}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="inline-block h-2.5 w-2.5 rounded-pill bg-b" aria-hidden />
         <span className="text-fg-2">{nameB}</span>
-        {sides ? (
-          <>
-            <span className="hidden md:inline">right</span>
-            <span className="md:hidden">bottom</span>
-          </>
-        ) : null}
       </span>
-      <span>{note ?? `Differences read as ${nameA} compared with ${nameB}.`}</span>
+      <span>{note ?? `Gap is ${nameA} minus ${nameB}.`}</span>
     </p>
   );
 }
@@ -147,136 +135,89 @@ export function KpiSection({
 }) {
   const oa = a.overview;
   const ob = b.overview;
-  const n = oa?.meta?.n_used ?? 0;
+  const nA = oa?.meta?.n_used ?? 0;
+  const nB = ob?.meta?.n_used ?? 0;
+  const n = nA + nB;
   const low = Boolean(oa?.meta?.low_confidence || ob?.meta?.low_confidence);
   const d = (key: string) => deltas.find((x) => x.key === key)?.delta ?? null;
   if (!oa || !ob) return <SectionFrame title="Key numbers" empty="Key numbers are not available for this range.">{null}</SectionFrame>;
   const nameA = oa.meta?.company_name ?? "A";
   const nameB = ob.meta?.company_name ?? "B";
+  const thinSide = nA <= nB ? nameA : nameB;
+  const thinN = Math.min(nA, nB);
   return (
     <section className="space-y-4">
       <div>
         <h2 className="text-section">Key numbers</h2>
-        <CompanyLegend nameA={nameA} nameB={nameB} />
+        <p className="mt-1 text-caption text-fg-3">Gap is {nameA} minus {nameB}.</p>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <CompareCard
-          metricKey="reviews_analysed"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={<Kpi value={formatCount(oa.reviews_analysed)} />}
-          b={<Kpi value={formatCount(ob.reviews_analysed)} />}
-          delta={d("reviews_analysed")}
-          unit=""
-          onClick={() => onExplore({})}
-        />
-        <CompareCard
-          metricKey="analysed_average_rating"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={
-            <div>
-              <Kpi value={formatStars(oa.analysed_average_rating?.value)} />
-              <p className="text-caption text-fg-2">
-                Store says {formatStars(oa.store_headline_rating?.value)} · Reviews say {formatStars(oa.analysed_average_rating?.value)}
-              </p>
-              <Sparkline values={oa.sparkline_rating ?? []} color="var(--a)" />
-            </div>
-          }
-          b={
-            <div>
-              <Kpi value={formatStars(ob.analysed_average_rating?.value)} />
-              <p className="text-caption text-fg-2">
-                Store says {formatStars(ob.store_headline_rating?.value)} · Reviews say {formatStars(ob.analysed_average_rating?.value)}
-              </p>
-              <Sparkline values={ob.sparkline_rating ?? []} color="var(--b)" />
-            </div>
-          }
-          delta={d("analysed_average_rating")}
-          unit="★"
-          onClick={() => onExplore({})}
-        />
-        <CompareCard
-          metricKey="positive_pct"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={
-            <div>
-              <Kpi value={formatPct(oa.positive_pct?.value)} />
-              <Ci ci={oa.positive_pct?.ci} />
-            </div>
-          }
-          b={
-            <div>
-              <Kpi value={formatPct(ob.positive_pct?.value)} />
-              <Ci ci={ob.positive_pct?.ci} />
-            </div>
-          }
-          delta={d("positive_pct")}
-          unit="%"
-          onClick={() => onExplore({ sentiment: "positive" })}
-        />
-        <CompareCard
-          metricKey="negative_pct"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={
-            <div>
-              <Kpi value={formatPct(oa.negative_pct?.value)} />
-              <Ci ci={oa.negative_pct?.ci} />
-            </div>
-          }
-          b={
-            <div>
-              <Kpi value={formatPct(ob.negative_pct?.value)} />
-              <Ci ci={ob.negative_pct?.ci} />
-            </div>
-          }
-          delta={d("negative_pct")}
-          unit="%"
-          lowerIsBetter
-          onClick={() => onExplore({ sentiment: "negative" })}
-        />
-        <CompareCard
-          metricKey="net_sentiment"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={<Kpi value={formatPct(oa.net_sentiment?.value)} />}
-          b={<Kpi value={formatPct(ob.net_sentiment?.value)} />}
-          delta={d("net_sentiment")}
-          unit="pts"
-          onClick={() => onExplore({})}
-        />
-        <CompareCard
-          metricKey="promo_dependence"
-          glossary={glossary}
-          n={n}
-          low={low}
-          nameA={nameA}
-          nameB={nameB}
-          a={<Kpi value={formatPct(oa.promo_dependence?.value)} />}
-          b={<Kpi value={formatPct(ob.promo_dependence?.value)} />}
-          delta={d("promo_dependence")}
-          unit="%"
-          lowerIsBetter
-          onClick={() => onExplore({})}
-        />
-      </div>
+      <KpiScoreboard
+        nameA={nameA}
+        nameB={nameB}
+        glossary={glossary}
+        n={n}
+        notice={
+          low ? `Low confidence — ${thinSide} has only ${thinN.toLocaleString()} analysed reviews.` : undefined
+        }
+        rows={[
+          {
+            metricKey: "reviews_analysed",
+            a: { value: formatCount(oa.reviews_analysed) },
+            b: { value: formatCount(ob.reviews_analysed) },
+            delta: d("reviews_analysed"),
+            unit: "",
+            onClick: () => onExplore({}),
+          },
+          {
+            metricKey: "analysed_average_rating",
+            a: {
+              value: formatStars(oa.analysed_average_rating?.value),
+              note: storeNote(oa.analysed_average_rating?.value, oa.store_headline_rating?.value),
+            },
+            b: {
+              value: formatStars(ob.analysed_average_rating?.value),
+              note: storeNote(ob.analysed_average_rating?.value, ob.store_headline_rating?.value),
+            },
+            delta: d("analysed_average_rating"),
+            unit: "★",
+            onClick: () => onExplore({}),
+          },
+          {
+            metricKey: "positive_pct",
+            a: { value: formatPct(oa.positive_pct?.value), note: ciNote(oa.positive_pct?.ci) },
+            b: { value: formatPct(ob.positive_pct?.value), note: ciNote(ob.positive_pct?.ci) },
+            delta: d("positive_pct"),
+            unit: "%",
+            onClick: () => onExplore({ sentiment: "positive" }),
+          },
+          {
+            metricKey: "negative_pct",
+            a: { value: formatPct(oa.negative_pct?.value), note: ciNote(oa.negative_pct?.ci) },
+            b: { value: formatPct(ob.negative_pct?.value), note: ciNote(ob.negative_pct?.ci) },
+            delta: d("negative_pct"),
+            unit: "%",
+            lowerIsBetter: true,
+            onClick: () => onExplore({ sentiment: "negative" }),
+          },
+          {
+            metricKey: "net_sentiment",
+            a: { value: formatPct(oa.net_sentiment?.value) },
+            b: { value: formatPct(ob.net_sentiment?.value) },
+            delta: d("net_sentiment"),
+            unit: "pts",
+            onClick: () => onExplore({}),
+          },
+          {
+            metricKey: "promo_dependence",
+            a: { value: formatPct(oa.promo_dependence?.value) },
+            b: { value: formatPct(ob.promo_dependence?.value) },
+            delta: d("promo_dependence"),
+            unit: "%",
+            lowerIsBetter: true,
+            onClick: () => onExplore({}),
+          },
+        ]}
+      />
     </section>
   );
 }

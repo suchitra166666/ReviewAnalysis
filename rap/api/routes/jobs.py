@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -71,10 +71,29 @@ def post_estimate(body: EstimateIn) -> dict[str, Any]:
     }
 
 
+_LLM_KINDS = {
+    JobKind.extract_a,
+    JobKind.extract_b,
+    JobKind.reconcile,
+    JobKind.translate,
+    JobKind.flags,
+    JobKind.summarize,
+    JobKind.full_pipeline,
+}
+
+
 @router.post("/jobs")
-def post_job(body: JobCreate) -> dict[str, Any]:
+def post_job(body: JobCreate, x_visitor_id: str | None = Header(default=None, alias="X-Visitor-Id")) -> dict[str, Any]:
+    from rap.visitors import normalize_visitor_id, visitor_has_key
+
+    params = dict(body.params or {})
+    visitor_id = normalize_visitor_id(x_visitor_id)
+    if visitor_id:
+        params["visitor_id"] = visitor_id
+    if body.kind in _LLM_KINDS and (not visitor_id or not visitor_has_key(visitor_id)):
+        raise HTTPException(400, "Add your OpenAI or DeepSeek key to get started.")
     try:
-        job = create_job(body.kind, body.params, confirm=body.confirm)
+        job = create_job(body.kind, params, confirm=body.confirm)
     except CostCapExceeded as exc:
         raise HTTPException(400, str(exc))
     except ConfirmationRequired as exc:

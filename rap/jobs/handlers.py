@@ -5,12 +5,13 @@ import asyncio
 from rap.db.models import Job, JobKind, JobStatus
 from rap.db.session import session_scope
 from rap.jobs.queue import append_log, update_progress
-from rap.llm.context import current_job_id, job_log
+from rap.llm.context import current_job_id, current_visitor_id, job_log
 
 
 def handle_job(job_id: int) -> None:
     token_job = current_job_id.set(job_id)
     token_log = job_log.set(lambda line, _id=job_id: _log(_id, line))
+    token_visitor = None
     try:
         with session_scope() as session:
             job = session.get(Job, job_id)
@@ -21,6 +22,9 @@ def handle_job(job_id: int) -> None:
                 return
             kind = job.kind
             params = dict(job.params or {})
+        visitor_id = params.get("visitor_id")
+        if isinstance(visitor_id, str) and visitor_id:
+            token_visitor = current_visitor_id.set(visitor_id)
 
         if kind == JobKind.scrape:
             _handle_scrape(job_id, params)
@@ -43,6 +47,8 @@ def handle_job(job_id: int) -> None:
     finally:
         current_job_id.reset(token_job)
         job_log.reset(token_log)
+        if token_visitor is not None:
+            current_visitor_id.reset(token_visitor)
 
 
 def _log(job_id: int, line: str) -> None:
