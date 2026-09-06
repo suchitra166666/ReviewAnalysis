@@ -2,11 +2,13 @@
 
 Self-hosted tool for product managers at food-delivery companies. It scrapes public App Store and Google Play reviews, labels them with two independent LLMs against a fixed theme taxonomy, and presents a two-company comparison dashboard.
 
+**Live:** [https://web-production-f02c6.up.railway.app](https://web-production-f02c6.up.railway.app)
+
 ## 5-minute quickstart
 
 ```bash
-git clone <this-repo>
-cd ReviewAnalysis_New_2.0
+git clone https://github.com/suchitra166666/ReviewAnalysis.git
+cd ReviewAnalysis
 make init
 docker compose up --build
 ```
@@ -24,7 +26,7 @@ Keys, models, thresholds, and companies are edited in the web Settings screen af
 
 ## Deploy on Railway
 
-The public dashboard is meant to run as four Railway services (Postgres with pgvector, API, worker, web). See `deploy/railway.md`.
+The public dashboard is live at [https://web-production-f02c6.up.railway.app](https://web-production-f02c6.up.railway.app) (API: [https://api-production-fa1ed.up.railway.app](https://api-production-fa1ed.up.railway.app)). Four Railway services (Postgres with pgvector, API, worker, web) deploy from this repo. See `deploy/railway.md`.
 
 ## Screenshots
 

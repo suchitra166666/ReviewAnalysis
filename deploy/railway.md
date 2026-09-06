@@ -2,7 +2,9 @@
 
 Four services in one project: **Postgres (pgvector image)**, **api**, **worker**, **web**.
 
-Railway does not run `docker-compose.yml`. Each Compose service is a Railway service pointing at this repo.
+Live dashboard: [https://web-production-f02c6.up.railway.app](https://web-production-f02c6.up.railway.app)
+
+Railway does not run `docker-compose.yml`. Each Compose service is a Railway service pointing at this repo (`suchitra166666/ReviewAnalysis`).
 
 ## Services
 
