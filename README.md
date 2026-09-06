@@ -96,4 +96,9 @@ rap summarize --a <slug-a> --b <slug-b> --since-launch --dry-run
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0). Personal, research, hobby, and nonprofit use is allowed. Commercial use is not. See `LICENSE`.
+The source is public. You may use, study, modify, and share it for **non-commercial** purposes under [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
+
+Allowed: personal, research, hobby, education, and nonprofit use.  
+Not allowed: using the software for any commercial purpose, including selling it, offering it as a paid service, or using it in a for-profit business, without a separate commercial licence.
+
+This is a source-available licence, not an OSI “open source” licence, because those require commercial use. See `LICENSE`.
