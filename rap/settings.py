@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from rap.db.models import ApiCredential, AppSetting, SettingValueType
@@ -68,22 +70,32 @@ def invalidate_cache() -> None:
     _cache.clear()
 
 
-def bootstrap(session: Session | None = None) -> None:
+def _bootstrap_into(session: Session) -> None:
     from rap.seed import seed_settings
 
+    seed_if_empty(session)
+    seed_settings(session)
+    session.flush()
+    _rename_concurrency_setting(session)
+    _reload_cache(session)
+
+
+def bootstrap(session: Session | None = None) -> None:
     if session is not None:
-        seed_if_empty(session)
-        seed_settings(session)
-        session.flush()
-        _rename_concurrency_setting(session)
-        _reload_cache(session)
+        _bootstrap_into(session)
         return
-    with session_scope() as scoped:
-        seed_if_empty(scoped)
-        seed_settings(scoped)
-        scoped.flush()
-        _rename_concurrency_setting(scoped)
-        _reload_cache(scoped)
+    last_error: IntegrityError | None = None
+    for attempt in range(5):
+        try:
+            with session_scope() as scoped:
+                _bootstrap_into(scoped)
+            return
+        except IntegrityError as exc:
+            last_error = exc
+            logger.warning("Settings seed raced with another process; retrying (%s/5)", attempt + 1)
+            time.sleep(0.3 * (attempt + 1))
+    if last_error is not None:
+        raise last_error
 
 
 def _reload_cache(session: Session) -> None:

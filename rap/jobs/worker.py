@@ -71,6 +71,9 @@ def run_once() -> bool:
 
 
 def run_forever(poll_seconds: float = 2.0) -> None:
+    from rap.db.migrate import upgrade_head
+
+    upgrade_head()
     formatter = configure_logging()
     bootstrap()
     formatter.set_secrets(stored_key_fragments())

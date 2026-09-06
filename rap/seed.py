@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from rap.db.models import ApiCredential, AppSetting, Company, SettingValueType
@@ -32,23 +33,29 @@ def seed_settings(session: Session, replace: bool = False) -> None:
     data = load_yaml(CONFIG_DIR / "settings_defaults.yaml")
     for item in data.get("settings", []):
         row = session.get(AppSetting, item["key"])
-        if row is None:
-            session.add(
-                AppSetting(
-                    key=item["key"],
-                    value=item["value"],
-                    value_type=SettingValueType(item["value_type"]),
-                    group=item["group"],
-                    label=item["label"],
-                    description=item["description"],
+        if row is not None:
+            if replace:
+                row.value = item["value"]
+                row.value_type = SettingValueType(item["value_type"])
+                row.group = item["group"]
+                row.label = item["label"]
+                row.description = item["description"]
+            continue
+        try:
+            with session.begin_nested():
+                session.add(
+                    AppSetting(
+                        key=item["key"],
+                        value=item["value"],
+                        value_type=SettingValueType(item["value_type"]),
+                        group=item["group"],
+                        label=item["label"],
+                        description=item["description"],
+                    )
                 )
-            )
-        elif replace:
-            row.value = item["value"]
-            row.value_type = SettingValueType(item["value_type"])
-            row.group = item["group"]
-            row.label = item["label"]
-            row.description = item["description"]
+                session.flush()
+        except IntegrityError:
+            continue
 
 
 def seed_providers(session: Session) -> None:
@@ -57,19 +64,24 @@ def seed_providers(session: Session) -> None:
         existing = session.scalar(select(ApiCredential).where(ApiCredential.provider_slug == slug))
         if existing:
             continue
-        session.add(
-            ApiCredential(
-                provider_slug=slug,
-                display_name=spec["display_name"],
-                base_url=spec["base_url"],
-                api_key_encrypted=None,
-                key_last4=None,
-                is_openai_compatible=spec.get("is_openai_compatible", True),
-                supports_batch=spec.get("supports_batch", False),
-                supports_structured_outputs=spec.get("supports_structured_outputs", False),
-                disable_thinking=spec.get("disable_thinking", False),
-            )
-        )
+        try:
+            with session.begin_nested():
+                session.add(
+                    ApiCredential(
+                        provider_slug=slug,
+                        display_name=spec["display_name"],
+                        base_url=spec["base_url"],
+                        api_key_encrypted=None,
+                        key_last4=None,
+                        is_openai_compatible=spec.get("is_openai_compatible", True),
+                        supports_batch=spec.get("supports_batch", False),
+                        supports_structured_outputs=spec.get("supports_structured_outputs", False),
+                        disable_thinking=spec.get("disable_thinking", False),
+                    )
+                )
+                session.flush()
+        except IntegrityError:
+            continue
 
 
 def seed_companies(session: Session, replace: bool = False) -> None:

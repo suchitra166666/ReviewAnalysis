@@ -9,7 +9,7 @@ Railway does not run `docker-compose.yml`. Each Compose service is a Railway ser
 | Service | Source | Start | Public |
 |---|---|---|---|
 | Postgres | Docker image `pgvector/pgvector:pg16` + a volume on `/var/lib/postgresql/data` | image default | no |
-| api | repo root `Dockerfile` | `rap api --host 0.0.0.0 --port $PORT` | yes |
+| api | repo root `Dockerfile` | `rap api --host 0.0.0.0` (reads `PORT`) | yes |
 | worker | same image as api | `rap worker` | no |
 | web | `web/Dockerfile` | `node server.js` | yes |
 

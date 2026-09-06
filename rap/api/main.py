@@ -9,21 +9,16 @@ from rap.logging_util import configure_logging
 from rap.settings import bootstrap, stored_key_fragments
 
 
-def _run_migrations() -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    command.upgrade(Config("alembic.ini"), "head")
-
-
 def create_app() -> FastAPI:
+    from rap.db.migrate import upgrade_head
+
     try:
         settings_encryption_key()
     except RuntimeError as exc:
         raise RuntimeError(
             "SETTINGS_ENCRYPTION_KEY is missing. Run `make init` before starting the API."
         ) from exc
-    _run_migrations()
+    upgrade_head()
     formatter = configure_logging()
     bootstrap()
     formatter.set_secrets(stored_key_fragments())
