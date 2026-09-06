@@ -59,6 +59,18 @@ Full labels and descriptions live in Settings and in `config/settings_defaults.y
 
 Default model roles (editable): extract A = `gpt-5.6-terra`, extract B = `deepseek-v4-pro`, tiebreak/summarise = `gpt-5.6-sol`, translate = `deepseek-v4-flash`, embed = `text-embedding-3-small`. Prices were verified 2026-09-05 against the OpenAI and DeepSeek docs.
 
+## Cost and time (two-company analysis)
+
+Measured on a Keeta vs Talabat run with the default models. Scraping is free; almost all of the spend is the two extract models. After junk reviews are removed, usable rows are typically about 70% of the sample drawn.
+
+| What you run | Reviews analysed | Expected cost | Expected time |
+|---|---|---|---|
+| 100 reviews each | ~200 drawn, ~138 used | **$1.21** (actual) | ~11 min first time; **3–5 min** if scrape is already in the database |
+| 500 each / 1,000 total | ~1,000 drawn | about **$6** | **8–15 min** if scrape is already in the database |
+| 1,000 each / 2,000 total | ~2,000 drawn | about **$12** | **15–25 min** if scrape is already in the database |
+
+The on-screen job “estimate” can undercount if older extracts exist. Trust the actual spend on a finished job.
+
 ## Metric glossary
 
 See `config/metrics.yaml`. Every dashboard metric uses those definitions verbatim.
