@@ -89,12 +89,11 @@ export default function DashboardPage() {
     router.replace(`/${serializeState(state)}`);
   }
 
-  /** Leave whatever is on screen and start from the default companies and range. */
+  /** Leave a saved view and open the pipeline so a new analysis can actually start. */
   function newReport() {
     setSavedId(null);
     setJustSaved(null);
-    setState(defaultState());
-    router.replace("/");
+    setRunOpen(true);
   }
 
   const setup = useQuery({

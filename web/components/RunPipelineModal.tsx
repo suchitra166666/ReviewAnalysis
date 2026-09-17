@@ -1,8 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Button, Input } from "@/components/ui";
-import { apiSend, type Company } from "@/lib/api";
+import { apiGet, apiSend, type Company } from "@/lib/api";
 import { PIPELINE_STAGES } from "@/lib/pipeline";
 import type { DashState } from "@/lib/url-state";
 
@@ -28,6 +30,11 @@ export function RunPipelineModal({
   const [custom, setCustom] = useState("100");
   const [estimate, setEstimate] = useState<AnyRec | null>(null);
   const [error, setError] = useState("");
+  const setup = useQuery({
+    queryKey: ["setup"],
+    queryFn: () => apiGet<{ has_own_key?: boolean }>("/setup-status"),
+  });
+  const hasKey = Boolean(setup.data?.has_own_key);
 
   function params() {
     const n = sampleN === "all" ? null : Math.max(1, Math.floor(Number(sampleN) || 0));
@@ -65,11 +72,15 @@ export function RunPipelineModal({
 
   async function run(confirm: boolean) {
     setError("");
+    if (!hasKey) {
+      setError("Add your OpenAI or DeepSeek key to run a report.");
+      return;
+    }
     try {
       await apiSend("/jobs", "POST", { kind: "full_pipeline", confirm, params: params() });
       onClose();
     } catch (err) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : "Could not start the report.");
     }
   }
 
@@ -186,10 +197,20 @@ export function RunPipelineModal({
       ) : (
         <p className="text-caption text-fg-3">Estimating…</p>
       )}
+      {!hasKey ? (
+        <p className="text-small text-fg">
+          Add your OpenAI or DeepSeek key first.{" "}
+          <Link href="/settings" className="underline" onClick={onClose}>
+            Open Settings
+          </Link>
+        </p>
+      ) : null}
       {estimate?.requires_confirmation && !estimate.refused ? (
-        <Button onClick={() => run(true)}>Confirm and run</Button>
+        <Button onClick={() => run(true)} disabled={!hasKey}>
+          Confirm and run
+        </Button>
       ) : (
-        <Button onClick={() => run(false)} disabled={Boolean(estimate?.refused) || !estimate}>
+        <Button onClick={() => run(false)} disabled={!hasKey || Boolean(estimate?.refused) || !estimate}>
           Run pipeline
         </Button>
       )}
